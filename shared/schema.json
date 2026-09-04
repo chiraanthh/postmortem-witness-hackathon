@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
+  "title": "Postmortem Witness contract",
+  "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
+  "version": "1.0.0",
+
+  "$defs": {
+    "EventType": {
+      "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. noise: everything else, which is most of a bridge call.",
+      "enum": ["action", "hypothesis", "status_change", "thread", "noise"]
+    },
+
+    "HypothesisState": {
+      "enum": ["open", "ruled_out", "confirmed"]
+    },
+
+    "Event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id", "type", "speaker", "timestamp_ms",
+        "text", "summary", "hypothesis_id", "new_state", "owner", "confidence"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable identity. An event may be re-emitted with the same event_id if it is later corrected (for example when the ASR revises a speaker assignment). The frontend should upsert on this key, not append blindly."
+        },
+        "type": { "$ref": "#/$defs/EventType" },
+        "speaker": {
+          "type": "string",
+          "description": "Speaker label from diarization, e.g. 'A'. A label, not a name. May be remapped to a display name later; may also be corrected after first emission."
+        },
+        "timestamp_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Milliseconds from the start of the incident audio, not wall clock."
+        },
+        "text": {
+          "type": "string",
+          "description": "Verbatim utterance. Never paraphrased. This is what gets quoted in the postmortem."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short normalized phrasing for the timeline UI, e.g. 'Rolled back deploy 4c21f'."
+        },
+        "hypothesis_id": {
+          "type": ["string", "null"],
+          "description": "Null except on hypothesis events (where it names the hypothesis being raised) and status_change events (where it names the hypothesis being changed). Required to be non-null for status_change."
+        },
+        "new_state": {
+          "oneOf": [
+            { "$ref": "#/$defs/HypothesisState" },
+            { "type": "null" }
+          ],
+          "description": "Null except on status_change events. Never inferred: only set when a state change was explicitly spoken."
+        },
+        "owner": {
+          "type": ["string", "null"],
+          "description": "Speaker who owns the action or thread, when one was named. Null when unowned."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Extractor confidence. The UI may dim or gate on low values."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "status_change" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "hypothesis_id": { "type": "string" },
+              "new_state": { "$ref": "#/$defs/HypothesisState" }
+            },
+            "required": ["hypothesis_id", "new_state"]
+          }
+        }
+      ]
+    },
+
+    "Hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hypothesis_id", "text", "state", "raised_by", "raised_at_ms"],
+      "properties": {
+        "hypothesis_id": { "type": "string" },
+        "text": { "type": "string", "description": "Normalized statement of the proposed cause." },
+        "state": { "$ref": "#/$defs/HypothesisState" },
+        "raised_by": { "type": "string" },
+        "raised_at_ms": { "type": "integer", "minimum": 0 },
+        "resolved_at_ms": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+
+    "Thread": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["thread_id", "text", "owner", "opened_at_ms", "closed"],
+      "properties": {
+        "thread_id": { "type": "string" },
+        "text": { "type": "string" },
+        "owner": { "type": ["string", "null"] },
+        "opened_at_ms": { "type": "integer", "minimum": 0 },
+        "closed": { "type": "boolean" }
+      }
+    },
+
+    "Action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_id", "text", "owner", "at_ms"],
+      "properties": {
+        "action_id": { "type": "string" },
+        "text": { "type": "string" },
+        "owner": { "type": ["string", "null"] },
+        "at_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "Latency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asr_ms", "extract_ms", "e2e_ms"],
+      "description": "Rolling p50 values in milliseconds, surfaced live in the dashboard.",
+      "properties": {
+        "asr_ms": { "type": "number", "minimum": 0 },
+        "extract_ms": { "type": "number", "minimum": 0 },
+        "e2e_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+
+    "IncidentState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "incident_id", "started_at_ms", "resolved",
+        "timeline", "hypotheses", "threads", "actions", "latency"
+      ],
+      "properties": {
+        "incident_id": { "type": "string" },
+        "started_at_ms": { "type": "integer", "minimum": 0 },
+        "resolved": { "type": "boolean" },
+        "timeline": { "type": "array", "items": { "$ref": "#/$defs/Event" } },
+        "hypotheses": { "type": "array", "items": { "$ref": "#/$defs/Hypothesis" } },
+        "threads": { "type": "array", "items": { "$ref": "#/$defs/Thread" } },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/Action" } },
+        "latency": { "$ref": "#/$defs/Latency" }
+      }
+    }
+  },
+
+  "oneOf": [
+    { "$ref": "#/$defs/Event" },
+    { "$ref": "#/$defs/IncidentState" }
+  ]
+}
