@@ -1,5 +1,5 @@
 /**
- * Postmortem Witness — shared event contract.
+ * Postmortem Witness — shared event contract. v1.1.0
  *
  * Generated from shared/schema.json. That file is the source of truth and is
  * FROZEN: if this file and the schema ever disagree, the schema wins.
@@ -9,33 +9,54 @@
  */
 
 /**
- * action        — something a human did or is doing.
- * hypothesis    — a proposed cause.
- * status_change — a hypothesis moving between states.
- * thread        — an open question or loose end nobody has closed.
- * noise         — everything else, which is most of a bridge call.
+ * action          — something a human did or is doing.
+ * hypothesis      — a proposed cause.
+ * status_change   — a hypothesis moving between states.
+ * thread          — an open question or loose end nobody has closed.
+ * noise           — everything else, which is most of a bridge call.
+ * speaker_amended — the ASR retroactively reassigned an earlier turn to a
+ *                   different speaker. Surfaced deliberately: corrections are
+ *                   shown to the user, never quietly swapped in.
  */
 export type EventType =
   | "action"
   | "hypothesis"
   | "status_change"
   | "thread"
-  | "noise";
+  | "noise"
+  | "speaker_amended";
 
 export type HypothesisState = "open" | "ruled_out" | "confirmed";
 
 export interface Event {
   /**
-   * Stable identity. An event may be re-emitted with the SAME event_id if it
-   * is later corrected — e.g. when the ASR revises a speaker assignment after
-   * the fact. Upsert on this key. Do not blindly append.
+   * Stable identity. An event may be re-emitted with the SAME event_id when
+   * it is corrected — most often after a speaker revision. Upsert on this
+   * key. Do not blindly append.
    */
   event_id: string;
 
   type: EventType;
 
-  /** Diarization label such as "A". A label, not a name. May be corrected. */
-  speaker: string;
+  /**
+   * The ASR turn this event came from. Carried end to end from the
+   * transcription layer. This is the join key: when the ASR revises who was
+   * speaking, it names a turn_order, and every event sharing that turn_order
+   * is amended.
+   */
+  turn_order: number;
+
+  /**
+   * Diarization label such as "A". Always a label, never a name. May be
+   * corrected after first emission.
+   */
+  speaker_label: string;
+
+  /**
+   * Human name, once known. Always null for now — a later roll-call pass maps
+   * labels to names. Render the name when present, fall back to the label.
+   */
+  speaker_name: string | null;
 
   /** Milliseconds from the start of the incident audio, not wall clock. */
   timestamp_ms: number;
@@ -58,11 +79,21 @@ export interface Event {
    */
   new_state: HypothesisState | null;
 
-  /** Speaker who owns the action or thread, when one was named. */
+  /**
+   * Who owns the action or thread, when someone was named. Carries whatever
+   * was spoken — usually a name heard on the call, not a diarization label.
+   */
   owner: string | null;
 
   /** Extractor confidence, 0.0–1.0. The UI may dim or gate on low values. */
   confidence: number;
+
+  /**
+   * Null except on `speaker_amended`, where it holds the label the turn was
+   * previously attributed to — so the UI can render "A → B" rather than
+   * silently changing what the user already read.
+   */
+  previous_speaker_label: string | null;
 }
 
 /** A `status_change` event always carries both hypothesis_id and new_state. */
@@ -72,8 +103,23 @@ export type StatusChangeEvent = Event & {
   new_state: HypothesisState;
 };
 
+/** A `speaker_amended` event always carries previous_speaker_label. */
+export type SpeakerAmendedEvent = Event & {
+  type: "speaker_amended";
+  previous_speaker_label: string;
+};
+
 export function isStatusChange(e: Event): e is StatusChangeEvent {
   return e.type === "status_change";
+}
+
+export function isSpeakerAmended(e: Event): e is SpeakerAmendedEvent {
+  return e.type === "speaker_amended";
+}
+
+/** Display helper: name when we have one, label otherwise. */
+export function speakerDisplay(e: Event): string {
+  return e.speaker_name ?? e.speaker_label;
 }
 
 export interface Hypothesis {
@@ -81,7 +127,8 @@ export interface Hypothesis {
   /** Normalized statement of the proposed cause. */
   text: string;
   state: HypothesisState;
-  raised_by: string;
+  /** Diarization label of whoever raised it. Subject to speaker revision. */
+  raised_by_label: string;
   raised_at_ms: number;
   resolved_at_ms: number | null;
 }
