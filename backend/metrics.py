@@ -166,6 +166,10 @@ class RevisionLog:
     def current_label(self, turn_order: int) -> str | None:
         return self._labels.get(turn_order)
 
+    def first_seen(self, turn_order: int) -> float | None:
+        """When this turn first arrived, for timing the second final."""
+        return self._first_seen_ms.get(turn_order)
+
     def note_revision(
         self,
         turn_order: int,
