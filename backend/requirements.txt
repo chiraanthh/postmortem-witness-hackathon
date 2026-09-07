@@ -4,6 +4,11 @@
 # without pulling in a native audio binding.
 
 assemblyai==1.3.0
+anthropic==1.4.0
 python-dotenv==1.2.3
 pydantic==2.13.5
 websockets==17.1
+
+# Note: anthropic 1.x is built on httpx2, not httpx. It arrives as a
+# transitive dependency; anything constructing a transport or an SDK
+# exception must use httpx2 or the SDK rejects it.

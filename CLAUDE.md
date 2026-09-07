@@ -116,3 +116,11 @@ stays null until a roll-call pass fills it in. That pass is not built yet.
 Run the ASR spike against a recorded call:
 
     python -m backend.transcription.stream --file demo/audio/call.wav
+
+Score the extractor against the hand-labelled set (needs ANTHROPIC_API_KEY):
+
+    python -m unittest backend.tests.test_extraction -v
+
+The extraction model is `EXTRACTION_MODEL` in the environment, defaulting to
+`claude-haiku-4-5-20251001`. It is resolved in `backend/config.py` and never
+named at a call site, so swapping models is one env var and no code change.

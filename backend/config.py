@@ -54,6 +54,35 @@ MAX_SPEAKERS: int | None = None
 FORMAT_TURNS = True
 
 
+# --- Extraction ------------------------------------------------------------
+
+# The model that turns an utterance into a structured event. Read from the
+# environment so it can be swapped with one variable and no code change - the
+# call site must never name a model literal.
+EXTRACTION_MODEL = os.environ.get("EXTRACTION_MODEL", "claude-haiku-4-5-20251001")
+
+# The output is a handful of short fields. Anything larger is the model
+# rambling, and truncation is cheaper to detect than to read.
+EXTRACTION_MAX_TOKENS = int(os.environ.get("EXTRACTION_MAX_TOKENS", "512"))
+
+# One retry, then noise. An incident call does not wait for us.
+EXTRACTION_MAX_RETRIES = int(os.environ.get("EXTRACTION_MAX_RETRIES", "1"))
+
+# Per-call ceiling. A slow extraction is worse than a missing one: the
+# dashboard falling behind the call is the failure mode that kills the demo.
+EXTRACTION_TIMEOUT_S = float(os.environ.get("EXTRACTION_TIMEOUT_S", "12"))
+
+# Bounds on the running context. The full transcript is never resent; only
+# the live hypothesis board and the open threads go back, and only this many.
+EXTRACTION_MAX_HYPOTHESES = int(os.environ.get("EXTRACTION_MAX_HYPOTHESES", "12"))
+EXTRACTION_MAX_THREADS = int(os.environ.get("EXTRACTION_MAX_THREADS", "8"))
+
+
+def extraction_model() -> str:
+    """Resolved at call time so tests and demos can override it in-process."""
+    return os.environ.get("EXTRACTION_MODEL", EXTRACTION_MODEL)
+
+
 def assemblyai_api_key() -> str:
     key = os.environ.get("ASSEMBLYAI_API_KEY", "").strip()
     if not key:
