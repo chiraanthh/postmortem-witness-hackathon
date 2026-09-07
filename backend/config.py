@@ -13,7 +13,24 @@ from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-load_dotenv(REPO_ROOT / ".env")
+# Anchored to this file, not to the working directory, so the keys resolve the
+# same whether the process was launched from the repo root, from backend/, or
+# from anywhere else. backend/.env is accepted as a fallback because it is an
+# easy place to put it by mistake; .env.example is deliberately NOT consulted -
+# it is a tracked template and must never hold a real value.
+_ENV_CANDIDATES = (REPO_ROOT / ".env", REPO_ROOT / "backend" / ".env")
+
+for _candidate in _ENV_CANDIDATES:
+    if _candidate.exists():
+        load_dotenv(_candidate)
+
+
+def env_file_status() -> dict[str, bool]:
+    """Which env files exist, and whether each key resolved. Never values."""
+    status = {str(c.relative_to(REPO_ROOT)): c.exists() for c in _ENV_CANDIDATES}
+    for key in ("ASSEMBLYAI_API_KEY", "ANTHROPIC_API_KEY"):
+        status[key] = bool(os.environ.get(key, "").strip())
+    return status
 
 
 class ConfigError(RuntimeError):
