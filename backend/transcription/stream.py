@@ -8,11 +8,13 @@ Design notes that are not obvious from the API:
 
 - A turn finalizes twice. The unformatted final is what we time; the formatted
   final is what we read. See "Known API behaviours" in CLAUDE.md.
-- `turn_order` and word timestamps are both **per session**, and both reset to
-  zero on reconnect. Since turn_order is our join key for speaker revisions,
-  a reconnect would silently alias turn 0 of session 2 onto turn 0 of session
-  1. So every session gets a turn offset and an audio-time base, and
-  everything leaving this module is expressed in global terms.
+- `turn_order` and word timestamps are both **per connection**, and both reset
+  to zero on reconnect. Since turn_order is our join key for speaker revisions,
+  a reconnect would silently alias turn 0 of the second connection onto turn 0
+  of the first and reattribute someone's words. So every connection gets a
+  monotonic `connection_epoch`, and the join key everywhere downstream is the
+  pair `(connection_epoch, turn_order)` - see `TurnKey`. Word timestamps get an
+  audio-time base instead, since those do need to be globally comparable.
 - `client.stream()` returns as soon as bytes are queued and becomes a silent
   no-op once the socket is gone. A dropped connection therefore looks exactly
   like silence unless you watch for it, which is what `_alive` is for.
@@ -46,6 +48,7 @@ from backend.config import ConfigError
 from backend.metrics import ASR, FORMAT, AudioClock, Metrics, RevisionLog, now_ms
 from backend.transcription import audio
 from backend.transcription.audio import AudioError, Chunk
+from backend.state.models import TurnKey
 from backend.transcription.buffer import (
     PAUSE_MS,
     Amendment,
@@ -89,9 +92,13 @@ class StreamConfig:
 
 @dataclass
 class _Session:
-    """Per-connection bookkeeping that must not leak across a reconnect."""
+    """Per-connection bookkeeping that must not leak across a reconnect.
 
-    turn_offset: int = 0
+    `epoch` is the half of the turn key that makes the server's turn numbering
+    unambiguous. It only ever goes up.
+    """
+
+    epoch: int = 0
     audio_base_ms: int = 0
     seen_first_chunk: bool = False
     session_id: str | None = None
@@ -135,7 +142,6 @@ class TranscriptionStream:
         self._closing = False
         self._client: StreamingClient | None = None
         self._session = _Session()
-        self._highest_turn = -1
         self._last_error: str | None = None
 
         self.reconnects = 0
@@ -213,10 +219,11 @@ class TranscriptionStream:
             time.sleep(delay)
 
             with self._lock:
-                # A fresh session restarts turn_order at 0 and word timestamps
-                # at 0. Rebase both so nothing downstream can collide.
+                # A fresh connection restarts turn_order at 0 and word
+                # timestamps at 0. Bump the epoch so turn keys stay unique,
+                # and rebase the audio clock on the first chunk we send.
                 self._session = _Session(
-                    turn_offset=self._highest_turn + 1,
+                    epoch=self._session.epoch + 1,
                     audio_base_ms=0,
                     seen_first_chunk=False,
                 )
@@ -228,8 +235,8 @@ class TranscriptionStream:
 
             self.reconnects += 1
             self.on_status(
-                f"reconnected; turn numbering resumes at "
-                f"{self._session.turn_offset}"
+                f"reconnected as epoch {self._session.epoch}; the server "
+                f"restarts turn numbering at 0"
             )
             return True
 
@@ -274,8 +281,7 @@ class TranscriptionStream:
 
         with self._lock:
             session = self._session
-            global_turn = session.turn_offset + event.turn_order
-            self._highest_turn = max(self._highest_turn, global_turn)
+            key = TurnKey(session.epoch, event.turn_order)
             base = session.audio_base_ms
 
         speaker = event.speaker_label or self._infer_speaker(event) or UNKNOWN_SPEAKER
@@ -288,18 +294,19 @@ class TranscriptionStream:
             if latency is not None:
                 self.metrics.record(ASR, latency)
             with self._lock:
-                self.revisions.note_turn(global_turn, speaker)
+                self.revisions.note_turn(key, speaker)
                 self.turns_seen += 1
         else:
-            first = self.revisions.first_seen(global_turn)
+            first = self.revisions.first_seen(key)
             if first is not None:
                 self.metrics.record(FORMAT, max(0.0, now_ms() - first))
             with self._lock:
                 # Diarization can also settle between the two finals.
-                self.revisions.note_turn(global_turn, speaker)
+                self.revisions.note_turn(key, speaker)
 
         turn = FinalTurn(
-            turn_order=global_turn,
+            connection_epoch=key.connection_epoch,
+            turn_order=key.turn_order,
             speaker_label=speaker,
             text=event.transcript,
             start_ms=start_ms,
@@ -318,13 +325,11 @@ class TranscriptionStream:
     ) -> None:
         for item in event.revisions:
             with self._lock:
-                global_turn = self._session.turn_offset + item.turn_order
-                record = self.revisions.note_revision(
-                    global_turn, item.speaker_label
-                )
-                amendment = self.buffer.apply_revision(
-                    global_turn, item.speaker_label
-                )
+                # A revision always refers to a turn on the connection that
+                # sent it, so it takes the current epoch.
+                key = TurnKey(self._session.epoch, item.turn_order)
+                record = self.revisions.note_revision(key, item.speaker_label)
+                amendment = self.buffer.apply_revision(key, item.speaker_label)
             if amendment is not None:
                 record.text = amendment.utterance.text
                 record.partial = amendment.partial
@@ -413,9 +418,9 @@ class _Printer:
 
     def utterance(self, u: Utterance) -> None:
         turns = (
-            f"turn {u.turn_order}"
-            if len(u.turn_orders) == 1
-            else f"turns {u.turn_orders[0]}-{u.turn_orders[-1]}"
+            f"turn {u.turn_key}"
+            if len(u.turn_keys) == 1
+            else f"turns {u.turn_keys[0]}-{u.turn_keys[-1]}"
         )
         head = f"[{self.clock(u.start_ms)}] {u.display_speaker}:"
         flag = self._c("  (amended)", YELLOW) if u.amended else ""
@@ -427,7 +432,7 @@ class _Printer:
             return
         phase = "formatted" if t.is_formatted else "raw"
         lat = f" | asr {latency:.0f} ms" if latency is not None else ""
-        line = f"    · turn {t.turn_order} {phase} [{t.speaker_label}]{lat}"
+        line = f"    · turn {t.key} {phase} [{t.speaker_label}]{lat}"
         print(self._c(line, DIM))
 
     def amendment(self, a: Amendment, delay_ms: float) -> None:
@@ -437,7 +442,7 @@ class _Printer:
         note = "  PARTIAL: utterance spans several turns" if a.partial else ""
         print(
             self._c(
-                f"  ~ speaker revised on turn {a.turn_order}: {arrow} "
+                f"  ~ speaker revised on turn {a.turn_key}: {arrow} "
                 f"(+{delay_ms:.0f} ms after the turn){note}",
                 YELLOW,
             )
@@ -475,7 +480,7 @@ def _print_report(stream: TranscriptionStream, printer: _Printer) -> None:
             partial = "  [partial]" if rev.partial else ""
             quote = f'  "{rev.text[:44]}"' if rev.text else ""
             print(
-                f"    turn {rev.turn_order:>4}  "
+                f"    turn {str(rev.turn_key):>8}  "
                 f"{rev.previous_label} -> {rev.new_label}  "
                 f"+{rev.delay_ms:>7.0f} ms{partial}{quote}"
             )
@@ -502,7 +507,8 @@ def _print_report(stream: TranscriptionStream, printer: _Printer) -> None:
     print(printer._c("STREAM", BOLD))
     print(f"  turns: {stream.turns_seen}   utterances: {len(stream.buffer.emitted)}")
     print(f"  audio sent: {stream.clock.audio_sent_ms / 1000:.1f}s")
-    print(f"  reconnects: {stream.reconnects}")
+    print(f"  reconnects: {stream.reconnects}   "
+          f"connection epochs used: {stream.reconnects + 1}")
     print(
         printer._c(
             f"  unformatted finals not extracted from: "

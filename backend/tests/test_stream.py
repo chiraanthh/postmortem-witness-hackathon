@@ -19,6 +19,7 @@ from assemblyai.streaming.v3 import (
 )
 
 from backend.metrics import ASR, FORMAT
+from backend.state.models import TurnKey
 from backend.transcription.stream import TranscriptionStream, UNKNOWN_SPEAKER
 
 
@@ -63,6 +64,10 @@ class Harness(unittest.TestCase):
 
     def fire(self, event):
         self.stream._handle_turn(None, event)
+
+    def set_epoch(self, epoch):
+        """Simulate a reconnect: the server restarts turn numbering at 0."""
+        self.stream._session.epoch = epoch
 
     def revise(self, *items):
         self.stream._handle_revision(
@@ -163,53 +168,75 @@ class TestRevision(Harness):
 class TestReconnectNumbering(Harness):
     """The failure this guards against is silent and destroys attribution."""
 
-    def test_turn_order_does_not_alias_across_a_reconnect(self):
+    def test_turn_key_does_not_alias_across_a_reconnect(self):
         self.fire(turn_event(0, "raw a", formatted=False, speaker="A"))
         self.fire(turn_event(0, "First thing.", formatted=True, speaker="A"))
         self.fire(turn_event(1, "raw b", formatted=False, speaker="B"))
         self.fire(turn_event(1, "Second thing.", formatted=True, speaker="B"))
 
         # A reconnect: the server starts counting turns from zero again.
-        self.stream._session.turn_offset = self.stream._highest_turn + 1
+        self.set_epoch(1)
         self.stream._session.audio_base_ms = 4000
 
         self.fire(turn_event(0, "raw c", formatted=False, speaker="A"))
         self.fire(turn_event(0, "Third thing.", formatted=True, speaker="A"))
 
-        orders = [t.turn_order for t, _ in self.turns]
-        self.assertEqual(orders, [0, 0, 1, 1, 2, 2])
+        keys = [t.key for t, _ in self.turns]
+        self.assertEqual(
+            keys,
+            [TurnKey(0, 0), TurnKey(0, 0), TurnKey(0, 1), TurnKey(0, 1),
+             TurnKey(1, 0), TurnKey(1, 0)],
+        )
 
-        third = self.stream.buffer.utterance_for_turn(2)
-        self.assertIsNotNone(third)
+        # Turn 0 exists in both epochs and they are different utterances.
+        first = self.stream.buffer.utterance_for_turn(TurnKey(0, 0))
+        third = self.stream.buffer.utterance_for_turn(TurnKey(1, 0))
+        self.assertEqual(first.text, "First thing.")
         self.assertEqual(third.text, "Third thing.")
-        # And it is a different utterance than turn 0's.
-        self.assertIsNot(third, self.stream.buffer.utterance_for_turn(0))
+        self.assertIsNot(first, third)
+
+    def test_raw_turn_order_is_preserved_not_rewritten(self):
+        """We log what the server said, not a synthetic global counter."""
+        self.set_epoch(4)
+        self.fire(turn_event(0, "Later on.", formatted=True, speaker="A"))
+        turn, _ = self.turns[-1]
+        self.assertEqual(turn.turn_order, 0)
+        self.assertEqual(turn.connection_epoch, 4)
 
     def test_timestamps_are_rebased_after_a_reconnect(self):
-        self.stream._session.turn_offset = 5
+        self.set_epoch(1)
         self.stream._session.audio_base_ms = 30_000
         self.fire(turn_event(0, "Later on.", formatted=True, speaker="A",
                              words=[word("Later", 100, 900)]))
-        utt = self.stream.buffer.utterance_for_turn(5)
+        utt = self.stream.buffer.utterance_for_turn(TurnKey(1, 0))
         self.assertEqual(utt.start_ms, 30_100)
         self.assertEqual(utt.end_ms, 30_900)
 
-    def test_revision_after_reconnect_targets_the_right_turn(self):
+    def test_revision_after_reconnect_targets_the_right_epoch(self):
         self.fire(turn_event(0, "raw a", formatted=False, speaker="A"))
         self.fire(turn_event(0, "First thing.", formatted=True, speaker="A"))
-        self.stream._session.turn_offset = self.stream._highest_turn + 1
 
+        self.set_epoch(1)
         self.fire(turn_event(0, "raw b", formatted=False, speaker="B"))
         self.fire(turn_event(0, "Second thing.", formatted=True, speaker="B"))
-        # Session-local turn 0 in session 2 is global turn 1.
+
+        # The server revises "turn 0" - meaning turn 0 of the live connection.
         self.revise((0, "C"))
 
         (amendment, _), = self.amendments
-        self.assertEqual(amendment.turn_order, 1)
+        self.assertEqual(amendment.turn_key, TurnKey(1, 0))
         self.assertEqual(amendment.utterance.text, "Second thing.")
+        # The first connection's turn 0 is untouched.
         self.assertEqual(
-            self.stream.buffer.utterance_for_turn(0).speaker_label, "A"
+            self.stream.buffer.utterance_for_turn(TurnKey(0, 0)).speaker_label, "A"
         )
+
+    def test_epoch_increments_only_upward(self):
+        self.assertEqual(self.stream._session.epoch, 0)
+        self.set_epoch(1)
+        self.set_epoch(2)
+        self.fire(turn_event(9, "Hello.", formatted=True, speaker="A"))
+        self.assertEqual(self.turns[-1][0].connection_epoch, 2)
 
 
 if __name__ == "__main__":

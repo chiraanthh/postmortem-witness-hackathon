@@ -1,5 +1,5 @@
 /**
- * Postmortem Witness — shared event contract. v1.1.0
+ * Postmortem Witness — shared event contract. v1.2.0
  *
  * Generated from shared/schema.json. That file is the source of truth and is
  * FROZEN: if this file and the schema ever disagree, the schema wins.
@@ -39,10 +39,24 @@ export interface Event {
   type: EventType;
 
   /**
-   * The ASR turn this event came from. Carried end to end from the
-   * transcription layer. This is the join key: when the ASR revises who was
-   * speaking, it names a turn_order, and every event sharing that turn_order
-   * is amended.
+   * Which ASR connection this event came from. Starts at 0, increments on
+   * every reconnect.
+   *
+   * turn_order is assigned by the server and restarts at 0 on every new
+   * connection, so it is ambiguous on its own: turn 0 of the second
+   * connection is a different turn from turn 0 of the first. Always key on
+   * the pair.
+   */
+  connection_epoch: number;
+
+  /**
+   * The ASR turn this event came from, as numbered by the server. Unique only
+   * within one connection_epoch.
+   *
+   * The join key is the composite (connection_epoch, turn_order) - never bare
+   * turn_order. When the ASR revises who was speaking it names both, and
+   * every event sharing that pair is amended. Use `turnKey` to build a stable
+   * string key for maps and React list keys.
    */
   turn_order: number;
 
@@ -115,6 +129,27 @@ export function isStatusChange(e: Event): e is StatusChangeEvent {
 
 export function isSpeakerAmended(e: Event): e is SpeakerAmendedEvent {
   return e.type === "speaker_amended";
+}
+
+/**
+ * Stable string form of the composite turn key, e.g. "e0/t14".
+ *
+ * Use this anywhere you would otherwise key on turn_order alone - map keys,
+ * React list keys, lookups when applying a speaker amendment. Keying on bare
+ * turn_order will silently merge turns from different connections.
+ */
+export function turnKey(e: Pick<Event, "connection_epoch" | "turn_order">): string {
+  return `e${e.connection_epoch}/t${e.turn_order}`;
+}
+
+/** True when both events came from the same ASR turn. */
+export function sameTurn(
+  a: Pick<Event, "connection_epoch" | "turn_order">,
+  b: Pick<Event, "connection_epoch" | "turn_order">,
+): boolean {
+  return (
+    a.connection_epoch === b.connection_epoch && a.turn_order === b.turn_order
+  );
 }
 
 /** Display helper: name when we have one, label otherwise. */

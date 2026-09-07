@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 from backend.metrics import ASR, AudioClock, Metrics, RevisionLog, percentile
+from backend.state.models import TurnKey
 
 
 class TestPercentile(unittest.TestCase):
@@ -76,8 +77,8 @@ class TestMetrics(unittest.TestCase):
 class TestRevisionLog(unittest.TestCase):
     def test_delay_is_measured_from_first_sighting(self):
         log = RevisionLog()
-        log.note_turn(1, "A")
-        rev = log.note_revision(1, "B")
+        log.note_turn(TurnKey(0, 1), "A")
+        rev = log.note_revision(TurnKey(0, 1), "B")
         self.assertEqual(rev.previous_label, "A")
         self.assertTrue(rev.changed)
         self.assertGreaterEqual(rev.delay_ms, 0.0)
@@ -86,27 +87,42 @@ class TestRevisionLog(unittest.TestCase):
 
     def test_restatement_is_counted_but_not_a_change(self):
         log = RevisionLog()
-        log.note_turn(1, "A")
-        log.note_revision(1, "A")
+        log.note_turn(TurnKey(0, 1), "A")
+        log.note_revision(TurnKey(0, 1), "A")
         self.assertEqual(log.total, 1)
         self.assertEqual(log.changed, [])
         self.assertIn("0 changed", log.summary())
 
     def test_first_sighting_is_not_overwritten(self):
         log = RevisionLog()
-        log.note_turn(1, "A")
-        log.note_turn(1, "A")   # the formatted pass for the same turn
+        log.note_turn(TurnKey(0, 1), "A")
+        log.note_turn(TurnKey(0, 1), "A")   # the formatted pass for the same turn
         self.assertEqual(log.turns_seen, 1)
+
+    def test_the_same_turn_number_in_two_epochs_is_two_turns(self):
+        log = RevisionLog()
+        log.note_turn(TurnKey(0, 1), "A")
+        log.note_turn(TurnKey(1, 1), "B")
+        self.assertEqual(log.turns_seen, 2)
+        self.assertEqual(log.current_label(TurnKey(0, 1)), "A")
+        self.assertEqual(log.current_label(TurnKey(1, 1)), "B")
+
+    def test_revision_records_the_composite_key(self):
+        log = RevisionLog()
+        log.note_turn(TurnKey(2, 5), "A")
+        rev = log.note_revision(TurnKey(2, 5), "B")
+        self.assertEqual(rev.turn_key, TurnKey(2, 5))
+        self.assertEqual(str(rev.turn_key), "e2/t5")
 
     def test_revision_for_unseen_turn_does_not_crash(self):
         log = RevisionLog()
-        rev = log.note_revision(7, "B")
+        rev = log.note_revision(TurnKey(0, 7), "B")
         self.assertEqual(rev.delay_ms, 0.0)
         self.assertIsNone(rev.previous_label)
 
     def test_summary_with_no_revisions(self):
         log = RevisionLog()
-        log.note_turn(1, "A")
+        log.note_turn(TurnKey(0, 1), "A")
         self.assertIn("0 received", log.summary())
 
 

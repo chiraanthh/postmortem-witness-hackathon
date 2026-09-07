@@ -3,45 +3,74 @@
   "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
   "title": "Postmortem Witness contract",
   "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
-  "version": "1.1.0",
-
+  "version": "1.2.0",
   "$defs": {
     "EventType": {
       "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",
-      "enum": ["action", "hypothesis", "status_change", "thread", "noise", "speaker_amended"]
+      "enum": [
+        "action",
+        "hypothesis",
+        "status_change",
+        "thread",
+        "noise",
+        "speaker_amended"
+      ]
     },
-
     "HypothesisState": {
-      "enum": ["open", "ruled_out", "confirmed"]
+      "enum": [
+        "open",
+        "ruled_out",
+        "confirmed"
+      ]
     },
-
     "Event": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "event_id", "type", "turn_order", "speaker_label", "speaker_name",
-        "timestamp_ms", "text", "summary", "hypothesis_id", "new_state",
-        "owner", "confidence", "previous_speaker_label"
+        "event_id",
+        "type",
+        "connection_epoch",
+        "turn_order",
+        "speaker_label",
+        "speaker_name",
+        "timestamp_ms",
+        "text",
+        "summary",
+        "hypothesis_id",
+        "new_state",
+        "owner",
+        "confidence",
+        "previous_speaker_label"
       ],
       "properties": {
         "event_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Stable identity. An event may be re-emitted with the same event_id when it is corrected — most often after a speaker revision. Upsert on this key, do not append blindly."
+          "description": "Stable identity. An event may be re-emitted with the same event_id when it is corrected \u2014 most often after a speaker revision. Upsert on this key, do not append blindly."
         },
-        "type": { "$ref": "#/$defs/EventType" },
+        "type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "connection_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Which ASR connection this event came from. Starts at 0 and increments on every reconnect. turn_order is assigned by the server and restarts at 0 on each new connection, so turn_order alone is ambiguous across a reconnect. The join key is always the composite (connection_epoch, turn_order) - never bare turn_order."
+        },
         "turn_order": {
           "type": "integer",
           "minimum": 0,
-          "description": "The ASR turn this event was derived from. Assigned by the transcription layer and carried end to end. This is the join key a speaker revision uses to find and amend events that were already emitted."
+          "description": "The ASR turn this event was derived from, as numbered by the server. Only unique within one connection_epoch. Always pair it with connection_epoch; see that field."
         },
         "speaker_label": {
           "type": "string",
           "description": "Diarization label from the ASR, e.g. 'A'. Always a label, never a name. May be corrected after first emission by a speaker revision."
         },
         "speaker_name": {
-          "type": ["string", "null"],
-          "description": "Human name for the speaker, once known. Always null for now — populated later by a roll-call pass that maps labels to names. Render the name when present and fall back to the label when not."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Human name for the speaker, once known. Always null for now \u2014 populated later by a roll-call pass that maps labels to names. Render the name when present and fall back to the label when not."
         },
         "timestamp_ms": {
           "type": "integer",
@@ -57,19 +86,29 @@
           "description": "Short normalized phrasing for the timeline UI, e.g. 'Rolled back deploy 4c21f'."
         },
         "hypothesis_id": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Null except on hypothesis events (where it names the hypothesis being raised) and status_change events (where it names the hypothesis being changed). Required to be non-null for status_change."
         },
         "new_state": {
           "oneOf": [
-            { "$ref": "#/$defs/HypothesisState" },
-            { "type": "null" }
+            {
+              "$ref": "#/$defs/HypothesisState"
+            },
+            {
+              "type": "null"
+            }
           ],
           "description": "Null except on status_change events. Never inferred: only set when a state change was explicitly spoken."
         },
         "owner": {
-          "type": ["string", "null"],
-          "description": "Speaker who owns the action or thread, when one was named. Carries whatever was spoken — usually a name heard on the call, not a diarization label. Null when unowned."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Speaker who owns the action or thread, when one was named. Carries whatever was spoken \u2014 usually a name heard on the call, not a diarization label. Null when unowned."
         },
         "confidence": {
           "type": "number",
@@ -78,104 +117,246 @@
           "description": "Extractor confidence. The UI may dim or gate on low values."
         },
         "previous_speaker_label": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Null except on speaker_amended events, where it holds the label the turn used to be attributed to. Lets the UI show the correction as a correction ('A -> B') instead of silently swapping it."
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "const": "status_change" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "status_change"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "hypothesis_id": { "type": "string" },
-              "new_state": { "$ref": "#/$defs/HypothesisState" }
+              "hypothesis_id": {
+                "type": "string"
+              },
+              "new_state": {
+                "$ref": "#/$defs/HypothesisState"
+              }
             },
-            "required": ["hypothesis_id", "new_state"]
+            "required": [
+              "hypothesis_id",
+              "new_state"
+            ]
           }
         },
         {
-          "if": { "properties": { "type": { "const": "speaker_amended" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "speaker_amended"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
-            "properties": { "previous_speaker_label": { "type": "string" } },
-            "required": ["previous_speaker_label"]
+            "properties": {
+              "previous_speaker_label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "previous_speaker_label"
+            ]
           }
         }
       ]
     },
-
     "Hypothesis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["hypothesis_id", "text", "state", "raised_by_label", "raised_at_ms"],
+      "required": [
+        "hypothesis_id",
+        "text",
+        "state",
+        "raised_by_label",
+        "raised_at_ms"
+      ],
       "properties": {
-        "hypothesis_id": { "type": "string" },
-        "text": { "type": "string", "description": "Normalized statement of the proposed cause." },
-        "state": { "$ref": "#/$defs/HypothesisState" },
-        "raised_by_label": { "type": "string", "description": "Diarization label of whoever raised it. Subject to speaker revision." },
-        "raised_at_ms": { "type": "integer", "minimum": 0 },
-        "resolved_at_ms": { "type": ["integer", "null"], "minimum": 0 }
+        "hypothesis_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "description": "Normalized statement of the proposed cause."
+        },
+        "state": {
+          "$ref": "#/$defs/HypothesisState"
+        },
+        "raised_by_label": {
+          "type": "string",
+          "description": "Diarization label of whoever raised it. Subject to speaker revision."
+        },
+        "raised_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolved_at_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
       }
     },
-
     "Thread": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["thread_id", "text", "owner", "opened_at_ms", "closed"],
+      "required": [
+        "thread_id",
+        "text",
+        "owner",
+        "opened_at_ms",
+        "closed"
+      ],
       "properties": {
-        "thread_id": { "type": "string" },
-        "text": { "type": "string" },
-        "owner": { "type": ["string", "null"] },
-        "opened_at_ms": { "type": "integer", "minimum": 0 },
-        "closed": { "type": "boolean" }
+        "thread_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "opened_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "closed": {
+          "type": "boolean"
+        }
       }
     },
-
     "Action": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action_id", "text", "owner", "at_ms"],
+      "required": [
+        "action_id",
+        "text",
+        "owner",
+        "at_ms"
+      ],
       "properties": {
-        "action_id": { "type": "string" },
-        "text": { "type": "string" },
-        "owner": { "type": ["string", "null"] },
-        "at_ms": { "type": "integer", "minimum": 0 }
+        "action_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "at_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
-
     "Latency": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["asr_ms", "extract_ms", "e2e_ms"],
+      "required": [
+        "asr_ms",
+        "extract_ms",
+        "e2e_ms"
+      ],
       "description": "Rolling p50 values in milliseconds, surfaced live in the dashboard.",
       "properties": {
-        "asr_ms": { "type": "number", "minimum": 0 },
-        "extract_ms": { "type": "number", "minimum": 0 },
-        "e2e_ms": { "type": "number", "minimum": 0 }
+        "asr_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "extract_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "e2e_ms": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
-
     "IncidentState": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "incident_id", "started_at_ms", "resolved",
-        "timeline", "hypotheses", "threads", "actions", "latency"
+        "incident_id",
+        "started_at_ms",
+        "resolved",
+        "timeline",
+        "hypotheses",
+        "threads",
+        "actions",
+        "latency"
       ],
       "properties": {
-        "incident_id": { "type": "string" },
-        "started_at_ms": { "type": "integer", "minimum": 0 },
-        "resolved": { "type": "boolean" },
-        "timeline": { "type": "array", "items": { "$ref": "#/$defs/Event" } },
-        "hypotheses": { "type": "array", "items": { "$ref": "#/$defs/Hypothesis" } },
-        "threads": { "type": "array", "items": { "$ref": "#/$defs/Thread" } },
-        "actions": { "type": "array", "items": { "$ref": "#/$defs/Action" } },
-        "latency": { "$ref": "#/$defs/Latency" }
+        "incident_id": {
+          "type": "string"
+        },
+        "started_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Event"
+          }
+        },
+        "hypotheses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Hypothesis"
+          }
+        },
+        "threads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Thread"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Action"
+          }
+        },
+        "latency": {
+          "$ref": "#/$defs/Latency"
+        }
       }
     }
   },
-
   "oneOf": [
-    { "$ref": "#/$defs/Event" },
-    { "$ref": "#/$defs/IncidentState" }
+    {
+      "$ref": "#/$defs/Event"
+    },
+    {
+      "$ref": "#/$defs/IncidentState"
+    }
   ]
 }

@@ -59,13 +59,36 @@ server sends `SpeakerRevision` messages that retroactively reassign the
 speaker of turns it has *already* sent, keyed by `turn_order`.
 
   - This is why `turn_order` is carried end to end on every utterance and
-    every event. It is the join key for amendments.
+    every event. It is the join key for amendments - but only ever as half
+    of one; see "The turn key" below.
   - We do **not** buffer output to hide revisions. A revision emits a visible
     `speaker_amended` event carrying `previous_speaker_label`, and the UI
     shows the correction as a correction.
   - `SpeakerRevisionItem` has no timestamp of its own, so revision delay is
     measured locally: arrival time of the original turn, against arrival time
     of its revision.
+
+**The turn key is a pair, never a bare number.** `turn_order` is assigned by
+the server and **restarts at zero on every new connection**. So does the word
+timestamp clock. Turn 0 of the second connection is a completely different
+turn from turn 0 of the first.
+
+Since `turn_order` is the join key a speaker revision uses to find events that
+were already emitted, treating it as unique would, after a single mid-call
+reconnect, silently reassign one person's words to another. Nothing would
+error. The transcript would just quietly become wrong.
+
+  - Every event and every utterance carries `connection_epoch`, starting at 0
+    and incremented on each reconnect.
+  - **The join key everywhere downstream is the composite
+    `(connection_epoch, turn_order)`.** Never look anything up by bare
+    `turn_order`. In Python use `TurnKey` from `backend/state/models.py`; in
+    the frontend use `turnKey()` from `shared/events.ts`.
+  - `turn_order` is left exactly as the server sent it, rather than being
+    rewritten into a global counter. What we log matches what the API said,
+    which matters when reading a session back.
+  - Word timestamps are rebased onto the audio clock separately, because those
+    do need to be globally comparable.
 
 **Diarization flags.** `speaker_labels=true` enables it; `max_speakers` (1–10)
 caps the count when known in advance. Supported on `universal-3-5-pro`,

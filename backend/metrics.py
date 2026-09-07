@@ -19,6 +19,8 @@ import math
 import time
 from dataclasses import dataclass, field
 
+from backend.state.models import TurnKey
+
 # Stage names. Kept as constants so a typo cannot silently create a new,
 # permanently empty stage.
 ASR = "asr"           # audio sent -> unformatted final received
@@ -131,7 +133,7 @@ class Metrics:
 class Revision:
     """One retroactive speaker reassignment."""
 
-    turn_order: int
+    turn_key: TurnKey
     previous_label: str | None
     new_label: str | None
     delay_ms: float
@@ -155,35 +157,35 @@ class RevisionLog:
     """
 
     def __init__(self) -> None:
-        self._first_seen_ms: dict[int, float] = {}
-        self._labels: dict[int, str | None] = {}
+        self._first_seen_ms: dict[TurnKey, float] = {}
+        self._labels: dict[TurnKey, str | None] = {}
         self.revisions: list[Revision] = []
 
-    def note_turn(self, turn_order: int, speaker_label: str | None) -> None:
-        self._first_seen_ms.setdefault(turn_order, now_ms())
-        self._labels.setdefault(turn_order, speaker_label)
+    def note_turn(self, key: TurnKey, speaker_label: str | None) -> None:
+        self._first_seen_ms.setdefault(key, now_ms())
+        self._labels.setdefault(key, speaker_label)
 
-    def current_label(self, turn_order: int) -> str | None:
-        return self._labels.get(turn_order)
+    def current_label(self, key: TurnKey) -> str | None:
+        return self._labels.get(key)
 
-    def first_seen(self, turn_order: int) -> float | None:
+    def first_seen(self, key: TurnKey) -> float | None:
         """When this turn first arrived, for timing the second final."""
-        return self._first_seen_ms.get(turn_order)
+        return self._first_seen_ms.get(key)
 
     def note_revision(
         self,
-        turn_order: int,
+        key: TurnKey,
         new_label: str | None,
         *,
         partial: bool = False,
         text: str = "",
     ) -> Revision:
-        previous = self._labels.get(turn_order)
-        first_seen = self._first_seen_ms.get(turn_order)
+        previous = self._labels.get(key)
+        first_seen = self._first_seen_ms.get(key)
         delay = 0.0 if first_seen is None else max(0.0, now_ms() - first_seen)
-        self._labels[turn_order] = new_label
+        self._labels[key] = new_label
         rev = Revision(
-            turn_order=turn_order,
+            turn_key=key,
             previous_label=previous,
             new_label=new_label,
             delay_ms=delay,
