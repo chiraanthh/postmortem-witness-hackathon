@@ -85,6 +85,14 @@ EXTRACTION_MAX_TOKENS = int(os.environ.get("EXTRACTION_MAX_TOKENS", "512"))
 # One retry, then noise. An incident call does not wait for us.
 EXTRACTION_MAX_RETRIES = int(os.environ.get("EXTRACTION_MAX_RETRIES", "1"))
 
+# Zero, because this is classification, not writing. Left unset the SDK
+# samples at 1.0, and two extraction runs over the *same* recorded transcript
+# disagreed on three of the ten events the demo script embeds - which makes
+# every accuracy and recall number unfalsifiable, since any change can be
+# explained away as sampling. A run has to be reproducible before it can be
+# evidence.
+EXTRACTION_TEMPERATURE = float(os.environ.get("EXTRACTION_TEMPERATURE", "0"))
+
 # Per-call ceiling. A slow extraction is worse than a missing one: the
 # dashboard falling behind the call is the failure mode that kills the demo.
 EXTRACTION_TIMEOUT_S = float(os.environ.get("EXTRACTION_TIMEOUT_S", "12"))

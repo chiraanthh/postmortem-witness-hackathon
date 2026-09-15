@@ -119,11 +119,18 @@ class ExtractedFields(BaseModel):
             "of the others. Most utterances on an incident call are noise."
         )
     )
+    # Deliberately has no default, which makes it `required` in the JSON
+    # schema handed to the model. With a default it was optional, and once
+    # ExtractedFields moved inside a list the model started omitting it -
+    # every status_change came back with a blank summary, which is a blank row
+    # in the timeline. Required costs a few tokens on noise events and is
+    # worth it.
     summary: str = Field(
-        default="",
         description=(
-            "Short normalized phrasing for a timeline, under 12 words. Empty "
-            "string for noise."
+            "Short normalized phrasing for a timeline, under 12 words, e.g. "
+            "'Ruled out DNS' or 'Rolled back deploy 4c21f'. REQUIRED and must "
+            "be non-empty for every type except noise - it is the only thing "
+            "the timeline displays. Empty string for noise, and only noise."
         ),
     )
     hypothesis_id: str | None = Field(

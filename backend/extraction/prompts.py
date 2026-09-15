@@ -126,7 +126,9 @@ with the work. Never guess who is doing something. Null is normal.
 "bad-deploy", "replica-lag". On status_change, reuse the exact id from the \
 board in the context if the speaker is talking about one that already \
 exists.
-- summary: under 12 words, plain, no editorialising. Empty for noise.
+- summary: under 12 words, plain, no editorialising: "Ruled out DNS", \
+"Rolled back the deploy", "Incident declared resolved". Empty for noise. \
+Never let the summary decide the type - classify first, then describe.
 - confidence: your honest confidence. Below 0.5 for anything you are \
 guessing at.
 - Never invent detail that is not in the utterance.

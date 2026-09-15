@@ -166,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
             "retries": worker.retries,
             "degraded": worker.degraded,
             "rejected_status_changes": worker.rejected_status_changes,
+            "blank_summaries": worker.blank_summaries,
             "unknown_hypothesis_refs": worker.unknown_hypothesis_refs,
         },
         "refusals": refusals,

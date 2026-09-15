@@ -326,6 +326,39 @@ class TestStatusChangeGuard(unittest.TestCase):
         self.assertIsNone(only(out).new_state)
         self.assertIsNone(only(out).hypothesis_id)
 
+    def test_a_blank_summary_on_a_real_event_falls_back_and_is_counted(self):
+        """summary is the only text the timeline shows; blank is invisible."""
+        w = worker_with(one(type="status_change", summary="  ",
+                            hypothesis_id="dns", new_state="ruled_out",
+                            evidence_quote="DNS is fine"))
+        out = w.extract(utt("DNS is fine, the resolver logs are clean."))
+        self.assertEqual(only(out).type, "status_change")
+        self.assertEqual(only(out).summary,
+                         "DNS is fine, the resolver logs are clean.")
+        self.assertEqual(w.blank_summaries, 1)
+        self.assertIn("blank summaries", w.report())
+
+    def test_the_fallback_summary_is_truncated(self):
+        w = worker_with(one(type="action", summary=""))
+        long = " ".join(f"word{i}" for i in range(30))
+        out = w.extract(utt(long))
+        self.assertTrue(only(out).summary.endswith("..."))
+        self.assertEqual(len(only(out).summary.split()), 12)
+        self.assertTrue(only(out).summary.startswith("word0 word1 "))
+
+    def test_a_blank_summary_on_noise_is_expected_and_not_counted(self):
+        w = worker_with(one(type="noise", summary=""))
+        out = w.extract(utt("Yeah. Right. Okay."))
+        self.assertEqual(only(out).summary, "")
+        self.assertEqual(w.blank_summaries, 0)
+
+    def test_summary_is_required_in_the_schema_handed_to_the_model(self):
+        """Optional is why the model started omitting it inside a list."""
+        schema = ExtractedEvents.model_json_schema()
+        event = schema["$defs"]["ExtractedFields"]
+        self.assertIn("summary", event["required"])
+        self.assertIn("type", event["required"])
+
     def test_hypothesis_gets_an_id_even_if_the_model_omits_one(self):
         w = worker_with(one(type="hypothesis", summary="Cache eviction storm"))
         out = w.extract(utt("Might be the cache evicting hot keys."))
@@ -544,6 +577,11 @@ class TestSdkIntegration(unittest.TestCase):
         self.assertEqual(
             body["system"][0]["cache_control"], {"type": "ephemeral"}
         )
+        # Classification, not writing. Left unset the SDK samples at 1.0 and
+        # recall stops being reproducible. parse() has no temperature
+        # parameter, so this rides in via extra_body - assert it reaches the
+        # wire, or an SDK upgrade could silently drop it.
+        self.assertEqual(body["temperature"], 0)
 
     def test_guard_still_applies_to_a_real_sdk_response(self):
         captured = {}
@@ -612,16 +650,24 @@ class TestAccuracy(unittest.TestCase):
         rows, strict, tolerant, false_pos, missed = [], 0, 0, 0, 0
         for c in LABELLED:
             out = worker.extract(utt(c.text), context)
-            got = only(out).type
-            ok_strict = got == c.expected
-            ok_tolerant = got in c.acceptable
+            types = [e.type for e in out.events]
+            # Scored on the set, not on a single answer: since v1.3.0 an
+            # utterance can yield several events, and an extra one alongside
+            # the right one is a precision problem, not a recall miss. Taking
+            # only the first would score a correct answer as wrong purely
+            # because of ordering.
+            ok_strict = c.expected in types
+            ok_tolerant = bool(c.acceptable & set(types))
+            got = c.expected if ok_strict else (
+                next((t for t in types if t != "noise"), "noise")
+            )
             strict += ok_strict
             tolerant += ok_tolerant
-            if c.trap and got == "status_change":
+            if c.trap and "status_change" in types:
                 false_pos += 1
-            if c.expected == "status_change" and got != "status_change":
+            if c.expected == "status_change" and "status_change" not in types:
                 missed += 1
-            rows.append((c, got, ok_strict, ok_tolerant, out))
+            rows.append((c, got, types, ok_strict, ok_tolerant, out))
 
         n = len(LABELLED)
         real_changes = sum(1 for c in LABELLED if c.expected == "status_change")
@@ -629,10 +675,12 @@ class TestAccuracy(unittest.TestCase):
         print("\n" + "=" * 74)
         print(f"EXTRACTION ACCURACY  model={worker.model}")
         print("=" * 74)
-        for c, got, ok_s, ok_t, out in rows:
+        for c, got, types, ok_s, ok_t, out in rows:
             mark = "OK  " if ok_s else ("~   " if ok_t else "MISS")
-            flag = "  <-- FALSE POSITIVE" if (c.trap and got == "status_change") else ""
-            print(f"{mark} want={c.expected:<14} got={got:<14} {c.text[:44]!r}{flag}")
+            flag = "  <-- FALSE POSITIVE" if (c.trap and "status_change" in types) else ""
+            extra = f"  (+{len(types) - 1} more: {types})" if len(types) > 1 else ""
+            print(f"{mark} want={c.expected:<14} got={got:<14} "
+                  f"{c.text[:44]!r}{flag}{extra}")
             for rejection in out.rejections:
                 print(f"       refused: {rejection.reason[:60]}")
         print("-" * 74)

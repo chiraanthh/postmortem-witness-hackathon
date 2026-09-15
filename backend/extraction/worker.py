@@ -134,6 +134,13 @@ def _slugify(text: str, fallback: str = "hypothesis") -> str:
     return slug or fallback
 
 
+def _first_words(text: str, n: int) -> str:
+    """Opening words of an utterance, for use as a last-resort summary."""
+    words = text.split()
+    head = " ".join(words[:n])
+    return f"{head}..." if len(words) > n else head
+
+
 class ExtractionWorker:
     """Extracts structured events from utterances, one call per utterance."""
 
@@ -166,6 +173,7 @@ class ExtractionWorker:
         self.rejected_status_changes = 0
         self.events_emitted = 0
         self.multi_event_utterances = 0
+        self.blank_summaries = 0
         # A status change naming a hypothesis nobody put on the board. It is
         # accepted - the speaker did say it - but it is a dangling reference
         # until the state machine creates hypotheses on first reference.
@@ -329,6 +337,14 @@ class ExtractionWorker:
         response = self.client.messages.parse(
             model=self.model,
             max_tokens=config.EXTRACTION_MAX_TOKENS,
+            # Through extra_body because messages.parse() does not surface
+            # temperature in anthropic 1.4.0 - it is absent from the
+            # signature, not merely undocumented - while the underlying
+            # Messages API takes it. extra_body is the SDK's pass-through for
+            # exactly this. Asserted against the real request body in
+            # TestSdkIntegration, so an SDK upgrade that moves it will fail
+            # loudly rather than quietly resume sampling at 1.0.
+            extra_body={"temperature": config.EXTRACTION_TEMPERATURE},
             system=[
                 {
                     "type": "text",
@@ -401,6 +417,18 @@ class ExtractionWorker:
         if data["type"] == "noise":
             data["summary"] = ""
             data["owner"] = None
+        elif not data["summary"].strip():
+            # summary is the only text the timeline renders, so a blank one is
+            # an invisible event. Fall back to the speaker's own words - worse
+            # than a normalised phrase, far better than an empty row - and
+            # count it. The model filling it in is the real fix, so a silent
+            # backstop would hide the problem it exists to cover.
+            self.blank_summaries += 1
+            data["summary"] = _first_words(utterance.text, 12)
+            self._log(
+                f"blank summary on a {data['type']} event, turn "
+                f"{utterance.turn_key}: fell back to the utterance's own words"
+            )
 
         data["evidence_quote"] = (
             fields.evidence_quote if data["type"] == "status_change" else None
@@ -470,6 +498,7 @@ class ExtractionWorker:
             f"({self.multi_event_utterances} utterances yielded >1), "
             f"{self.retries} retries, {self.degraded} degraded to noise, "
             f"{self.rejected_status_changes} status_changes refused, "
+            f"{self.blank_summaries} blank summaries, "
             f"{self.unknown_hypothesis_refs} unknown-hypothesis refs | "
             f"p50={m.p50(EXTRACT):.0f}ms p95={m.p95(EXTRACT):.0f}ms"
         )
