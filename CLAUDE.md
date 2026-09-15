@@ -8,12 +8,44 @@ incident dashboard that exports a finished postmortem.
 - Backend is owned by Chiraanth. Frontend is owned by Disha.
   NEVER edit files outside your own directory.
 - shared/schema.json is a frozen contract. Do not modify it. If a change
-  seems necessary, stop and tell the user.
+  seems necessary, stop and tell the user. It is currently at **v1.3.0**;
+  see "Contract v1.3.0" below for what changed and why.
 - No database. No auth. No user accounts. State is in memory, single incident.
 - Every LLM extraction call must return schema-valid JSON. "noise" is a
   valid and common answer. Never invent a hypothesis state change that was
   not explicitly spoken.
 - Measure latency at every stage and expose it. It is a demo feature.
+
+## Contract v1.3.0
+
+Two changes, agreed with both owners. `shared/schema.json` is the source of
+truth; `shared/events.ts` and `backend/state/models.py` follow it.
+
+**`resolution` is a new EventType.** It marks an explicit spoken declaration
+that the incident is over — "declaring this resolved at three fifteen". It is
+a statement about the *incident*, not about any one hypothesis, so it carries
+no `hypothesis_id` and no `new_state`.
+
+Before this existed there was nowhere for that sentence to go, so the end of
+the call came out as noise and the exported postmortem had no closing entry.
+Like `status_change`, it must have been *said*: a call going quiet is not a
+resolution.
+
+**One utterance now produces a list of events, not one.** A single line can
+genuinely be two things — "yeah, it was the deploy, I'll revert it properly
+and put a test around it" is a `status_change` and an `action`, and the old
+one-event-per-utterance shape silently dropped the action.
+
+  - The extractor returns a list. Empty and single-element lists are both
+    valid. Most utterances still yield exactly one `noise` event.
+  - Every event from one utterance carries the same
+    `(connection_epoch, turn_order)`. **That pair identifies a turn, not an
+    event.** It is still the join key a speaker amendment uses - all events
+    from the turn get amended together - but the unique key is `event_id`,
+    and that is what a list render must key on.
+  - A degraded extraction still yields exactly one `noise` event, never an
+    empty list. Empty means "the model saw nothing here"; a failure must not
+    be indistinguishable from that.
 
 ## Stack
 Python 3.11, FastAPI, websockets, pydantic v2, AssemblyAI streaming SDK,

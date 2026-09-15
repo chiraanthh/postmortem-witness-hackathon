@@ -3,15 +3,16 @@
   "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
   "title": "Postmortem Witness contract",
   "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "$defs": {
     "EventType": {
-      "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",
+      "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. resolution: an explicit spoken declaration that the incident is resolved; it is a statement about the incident, not about any one hypothesis, so it carries no hypothesis_id. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",
       "enum": [
         "action",
         "hypothesis",
         "status_change",
         "thread",
+        "resolution",
         "noise",
         "speaker_amended"
       ]
@@ -46,7 +47,7 @@
         "event_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Stable identity. An event may be re-emitted with the same event_id when it is corrected \u2014 most often after a speaker revision. Upsert on this key, do not append blindly."
+          "description": "Stable identity, and the ONLY unique key on an event. An event may be re-emitted with the same event_id when it is corrected \u2014 most often after a speaker revision. Upsert on this key, do not append blindly. As of 1.3.0 one utterance can produce several events, so (connection_epoch, turn_order) is no longer unique per event and must not be used as a list key."
         },
         "type": {
           "$ref": "#/$defs/EventType"
@@ -59,7 +60,7 @@
         "turn_order": {
           "type": "integer",
           "minimum": 0,
-          "description": "The ASR turn this event was derived from, as numbered by the server. Only unique within one connection_epoch. Always pair it with connection_epoch; see that field."
+          "description": "The ASR turn this event was derived from, as numbered by the server. Only unique within one connection_epoch. Always pair it with connection_epoch; see that field. Since 1.3.0 the pair identifies a turn, not an event: one utterance may yield a status_change and an action together, and every event from that utterance shares the pair. It remains the join key for speaker amendments - all events sharing the pair are amended together - but the unique key is event_id."
         },
         "speaker_label": {
           "type": "string",
