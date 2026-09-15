@@ -1,4 +1,4 @@
-"""Pydantic mirrors of shared/schema.json v1.3.0.
+"""Pydantic mirrors of shared/schema.json v1.4.0.
 
 shared/schema.json is the contract and this file follows it. If the two ever
 disagree, the schema wins and this file is the bug.
@@ -18,7 +18,7 @@ from typing import Literal, NamedTuple
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "shared" / "schema.json"
-SCHEMA_VERSION = "1.3.0"
+SCHEMA_VERSION = "1.4.0"
 
 
 class TurnKey(NamedTuple):
