@@ -118,6 +118,22 @@ def anthropic_api_key() -> str:
     return key
 
 
+# Demo-audio synthesis only; the pipeline never calls Sarvam. SARWAM_API_KEY is
+# accepted because that is how the name is actually spelled in the local .env,
+# and silently failing over a transposed letter is worse than tolerating it.
+_SARVAM_KEY_NAMES = ("SARVAM_API_KEY", "SARWAM_API_KEY")
+
+
+def sarvam_api_key() -> str:
+    for name in _SARVAM_KEY_NAMES:
+        key = os.environ.get(name, "").strip()
+        if key:
+            return key
+    raise ConfigError(
+        f"No Sarvam key found. Set one of {' or '.join(_SARVAM_KEY_NAMES)} in .env"
+    )
+
+
 def redacted_key(key: str) -> str:
     """The only form of a key that is allowed to reach a log or a terminal."""
     if len(key) <= 8:

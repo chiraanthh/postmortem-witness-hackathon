@@ -24,7 +24,12 @@ import anthropic
 import httpx2
 
 from backend.extraction.worker import ExtractionWorker, RunningContext, _slugify
-from backend.state.models import ExtractedFields, TurnKey, quote_is_grounded
+from backend.state.models import (
+    ExtractedEvents,
+    ExtractedFields,
+    TurnKey,
+    quote_is_grounded,
+)
 from backend.transcription.buffer import Utterance
 
 
@@ -165,11 +170,33 @@ class _FakeClient:
         self.messages = _FakeMessages(script)
 
 
-def fields(**kw):
+def fields(**kw) -> ExtractedFields:
+    """One candidate event, as the model would describe it."""
     base = dict(type="noise", summary="", hypothesis_id=None, new_state=None,
                 owner=None, confidence=0.5, evidence_quote=None)
     base.update(kw)
     return ExtractedFields(**base)
+
+
+def one(**kw) -> ExtractedEvents:
+    """A model reply carrying a single candidate. The common case."""
+    return ExtractedEvents(events=[fields(**kw)])
+
+
+def many(*candidates: dict) -> ExtractedEvents:
+    """A model reply carrying several candidates from one utterance."""
+    return ExtractedEvents(events=[fields(**c) for c in candidates])
+
+
+def only(out) -> object:
+    """The single event an outcome produced.
+
+    Asserts the count as a side effect: most utterances must still yield
+    exactly one event, and a test that silently read events[0] out of a list
+    of three would pass while the worker was over-splitting.
+    """
+    assert len(out.events) == 1, f"expected exactly 1 event, got {len(out.events)}"
+    return out.events[0]
 
 
 def _request():
@@ -183,34 +210,34 @@ def worker_with(*script, **kw):
 
 class TestPlumbing(unittest.TestCase):
     def test_happy_path_builds_a_valid_event(self):
-        w = worker_with(fields(type="action", summary="Rolled back deploy",
+        w = worker_with(one(type="action", summary="Rolled back deploy",
                                owner="Priya", confidence=0.9))
         out = w.extract(utt("I'm rolling back the deploy.", speaker="B", order=7, epoch=2))
-        self.assertEqual(out.event.type, "action")
-        self.assertEqual(out.event.summary, "Rolled back deploy")
-        self.assertEqual(out.event.owner, "Priya")
+        self.assertEqual(only(out).type, "action")
+        self.assertEqual(only(out).summary, "Rolled back deploy")
+        self.assertEqual(only(out).owner, "Priya")
         # Identity comes from the utterance, never from the model.
-        self.assertEqual(out.event.connection_epoch, 2)
-        self.assertEqual(out.event.turn_order, 7)
-        self.assertEqual(out.event.speaker_label, "B")
-        self.assertEqual(out.event.text, "I'm rolling back the deploy.")
+        self.assertEqual(only(out).connection_epoch, 2)
+        self.assertEqual(only(out).turn_order, 7)
+        self.assertEqual(only(out).speaker_label, "B")
+        self.assertEqual(only(out).text, "I'm rolling back the deploy.")
         self.assertFalse(out.degraded)
         self.assertEqual(out.attempts, 1)
 
     def test_model_never_supplies_identity_fields(self):
-        w = worker_with(fields(type="noise"))
+        w = worker_with(one(type="noise"))
         out = w.extract(utt("whatever", order=3, epoch=1))
         self.assertNotIn("event_id", w._client.messages.last_kwargs.get("messages", [{}])[0].get("content", ""))
-        self.assertTrue(out.event.event_id)
-        self.assertEqual(out.event.turn_key, TurnKey(1, 3))
+        self.assertTrue(only(out).event_id)
+        self.assertEqual(only(out).turn_key, TurnKey(1, 3))
 
     def test_the_model_is_never_named_at_the_call_site(self):
-        w = worker_with(fields())
+        w = worker_with(one())
         w.extract(utt("hello"))
         self.assertEqual(w._client.messages.last_kwargs["model"], "test-model")
 
     def test_system_prompt_is_sent_and_marked_cacheable(self):
-        w = worker_with(fields())
+        w = worker_with(one())
         w.extract(utt("hello"))
         system = w._client.messages.last_kwargs["system"]
         self.assertEqual(system[0]["cache_control"], {"type": "ephemeral"})
@@ -220,7 +247,7 @@ class TestPlumbing(unittest.TestCase):
             hypotheses=tuple((f"h{i}", f"cause {i}", "open") for i in range(40)),
             threads=tuple((f"t{i}", f"thread {i}") for i in range(40)),
         )
-        w = worker_with(fields())
+        w = worker_with(one())
         w.extract(utt("current utterance"), ctx)
         sent = w._client.messages.last_kwargs["messages"][0]["content"]
         self.assertIn("current utterance", sent)
@@ -229,80 +256,183 @@ class TestPlumbing(unittest.TestCase):
         self.assertLess(len(sent), 4000)
 
     def test_structured_output_is_enforced_by_schema_not_prose(self):
-        w = worker_with(fields())
+        w = worker_with(one())
         w.extract(utt("hello"))
-        self.assertIs(w._client.messages.last_kwargs["output_format"], ExtractedFields)
+        self.assertIs(w._client.messages.last_kwargs["output_format"], ExtractedEvents)
 
 
 class TestStatusChangeGuard(unittest.TestCase):
     def test_grounded_quote_is_accepted(self):
-        w = worker_with(fields(type="status_change", summary="DNS ruled out",
+        w = worker_with(one(type="status_change", summary="DNS ruled out",
                                hypothesis_id="dns", new_state="ruled_out",
                                evidence_quote="we have ruled out DNS"))
         out = w.extract(utt("Okay, we have ruled out DNS, the logs are clean."))
-        self.assertEqual(out.event.type, "status_change")
-        self.assertEqual(out.event.new_state, "ruled_out")
-        self.assertIsNone(out.rejected_status_change)
+        self.assertEqual(only(out).type, "status_change")
+        self.assertEqual(only(out).new_state, "ruled_out")
+        self.assertEqual(out.rejections, [])
         self.assertEqual(w.rejected_status_changes, 0)
 
     def test_invented_quote_is_refused_and_becomes_noise(self):
-        w = worker_with(fields(type="status_change", summary="Cache ruled out",
+        w = worker_with(one(type="status_change", summary="Cache ruled out",
                                hypothesis_id="cache", new_state="ruled_out",
                                evidence_quote="we ruled out the cache"))
         out = w.extract(utt("The cache metrics look normal to me."))
-        self.assertEqual(out.event.type, "noise")
-        self.assertIsNone(out.event.new_state)
-        self.assertIsNone(out.event.hypothesis_id)
-        self.assertIn("not in the utterance", out.rejected_status_change)
+        self.assertEqual(only(out).type, "noise")
+        self.assertIsNone(only(out).new_state)
+        self.assertIsNone(only(out).hypothesis_id)
+        self.assertIn("not in the utterance", out.rejections[0].reason)
+        self.assertEqual(out.rejections[0].claimed_quote, "we ruled out the cache")
         self.assertEqual(w.rejected_status_changes, 1)
 
     def test_status_change_for_an_unknown_hypothesis_is_accepted_but_counted(self):
-        w = worker_with(fields(type="status_change", summary="CDN ruled out",
+        w = worker_with(one(type="status_change", summary="CDN ruled out",
                                hypothesis_id="cdn", new_state="ruled_out",
                                evidence_quote="we ruled out the CDN"))
         ctx = RunningContext(hypotheses=(("cache", "Cache eviction", "open"),))
         out = w.extract(utt("Right, we ruled out the CDN as well."), ctx)
         # Kept: the speaker did say it. Flagged: it dangles until the state
         # machine creates hypotheses on first reference.
-        self.assertEqual(out.event.type, "status_change")
-        self.assertEqual(out.event.hypothesis_id, "cdn")
+        self.assertEqual(only(out).type, "status_change")
+        self.assertEqual(only(out).hypothesis_id, "cdn")
         self.assertEqual(w.unknown_hypothesis_refs, 1)
         self.assertEqual(w.rejected_status_changes, 0)
 
     def test_status_change_for_a_known_hypothesis_is_not_flagged(self):
-        w = worker_with(fields(type="status_change", summary="Cache ruled out",
+        w = worker_with(one(type="status_change", summary="Cache ruled out",
                                hypothesis_id="cache", new_state="ruled_out",
                                evidence_quote="we ruled out the cache"))
         ctx = RunningContext(hypotheses=(("cache", "Cache eviction", "open"),))
         out = w.extract(utt("Okay, we ruled out the cache."), ctx)
-        self.assertEqual(out.event.type, "status_change")
+        self.assertEqual(only(out).type, "status_change")
         self.assertEqual(w.unknown_hypothesis_refs, 0)
 
     def test_status_change_without_a_quote_is_refused(self):
-        w = worker_with(fields(type="status_change", hypothesis_id="cache",
+        w = worker_with(one(type="status_change", hypothesis_id="cache",
                                new_state="ruled_out", evidence_quote=None))
         out = w.extract(utt("The cache is fine."))
-        self.assertEqual(out.event.type, "noise")
+        self.assertEqual(only(out).type, "noise")
 
     def test_status_change_without_new_state_is_refused(self):
-        w = worker_with(fields(type="status_change", hypothesis_id="cache",
+        w = worker_with(one(type="status_change", hypothesis_id="cache",
                                new_state=None, evidence_quote="the cache is fine"))
         out = w.extract(utt("The cache is fine."))
-        self.assertEqual(out.event.type, "noise")
-        self.assertEqual(out.rejected_status_change, "no new_state given")
+        self.assertEqual(only(out).type, "noise")
+        self.assertEqual(out.rejections[0].reason, "no new_state given")
 
     def test_non_status_types_cannot_carry_state(self):
-        w = worker_with(fields(type="action", summary="did a thing",
+        w = worker_with(one(type="action", summary="did a thing",
                                hypothesis_id="cache", new_state="confirmed"))
         out = w.extract(utt("I restarted the workers."))
-        self.assertIsNone(out.event.new_state)
-        self.assertIsNone(out.event.hypothesis_id)
+        self.assertIsNone(only(out).new_state)
+        self.assertIsNone(only(out).hypothesis_id)
 
     def test_hypothesis_gets_an_id_even_if_the_model_omits_one(self):
-        w = worker_with(fields(type="hypothesis", summary="Cache eviction storm"))
+        w = worker_with(one(type="hypothesis", summary="Cache eviction storm"))
         out = w.extract(utt("Might be the cache evicting hot keys."))
-        self.assertEqual(out.event.hypothesis_id, "cache-eviction-storm")
-        self.assertIsNone(out.event.new_state)
+        self.assertEqual(only(out).hypothesis_id, "cache-eviction-storm")
+        self.assertIsNone(only(out).new_state)
+
+
+class TestEventList(unittest.TestCase):
+    """Contract v1.3.0: one utterance, zero or more events."""
+
+    def test_one_utterance_can_yield_a_status_change_and_an_action(self):
+        w = worker_with(many(
+            dict(type="status_change", summary="Deploy confirmed as cause",
+                 hypothesis_id="bad-deploy", new_state="confirmed",
+                 evidence_quote="it was the deploy"),
+            dict(type="action", summary="Revert the retry change",
+                 confidence=0.9),
+        ))
+        out = w.extract(utt(
+            "Yeah, it was the deploy. I'll revert the retry change properly.",
+            order=4, epoch=1,
+        ))
+        self.assertEqual([e.type for e in out.events],
+                         ["status_change", "action"])
+        # Both came from one turn, so they share the join key but not identity.
+        self.assertEqual({e.turn_key for e in out.events}, {TurnKey(1, 4)})
+        self.assertEqual(len({e.event_id for e in out.events}), 2)
+        self.assertEqual(w.multi_event_utterances, 1)
+
+    def test_an_empty_list_is_valid_and_yields_no_events(self):
+        w = worker_with(ExtractedEvents(events=[]))
+        out = w.extract(utt("..."))
+        self.assertEqual(out.events, [])
+        self.assertFalse(out.degraded)
+        self.assertEqual(w.events_emitted, 0)
+
+    def test_noise_alongside_a_real_event_is_dropped(self):
+        w = worker_with(many(
+            dict(type="action", summary="Restarted the workers"),
+            dict(type="noise"),
+        ))
+        out = w.extract(utt("I restarted the workers."))
+        self.assertEqual(only(out).type, "action")
+
+    def test_repeated_noise_collapses_to_one_event(self):
+        w = worker_with(many(dict(type="noise"), dict(type="noise")))
+        out = w.extract(utt("Yeah. Right. Okay."))
+        self.assertEqual(only(out).type, "noise")
+
+    def test_the_same_event_twice_is_deduplicated(self):
+        w = worker_with(many(
+            dict(type="action", summary="Rolled back the deploy"),
+            dict(type="action", summary="rolled back the DEPLOY"),
+        ))
+        out = w.extract(utt("I'm rolling back the deploy now."))
+        self.assertEqual(only(out).summary, "Rolled back the deploy")
+
+    def test_a_refused_status_change_does_not_leave_noise_beside_a_sibling(self):
+        """The downgrade must not add a junk row when something real survived."""
+        w = worker_with(many(
+            dict(type="status_change", summary="Cache ruled out",
+                 hypothesis_id="cache", new_state="ruled_out",
+                 evidence_quote="we ruled out the cache"),
+            dict(type="action", summary="Checked the cache metrics"),
+        ))
+        out = w.extract(utt("I had a look at the cache metrics."))
+        self.assertEqual(only(out).type, "action")
+        self.assertEqual(w.rejected_status_changes, 1)
+        self.assertIn("not in the utterance", out.rejections[0].reason)
+
+    def test_a_refused_status_change_alone_still_becomes_noise(self):
+        """With nothing else in the list, the utterance still happened."""
+        w = worker_with(one(type="status_change", summary="Cache ruled out",
+                            hypothesis_id="cache", new_state="ruled_out",
+                            evidence_quote="we ruled out the cache"))
+        out = w.extract(utt("The cache metrics look normal to me."))
+        self.assertEqual(only(out).type, "noise")
+
+
+class TestResolution(unittest.TestCase):
+    """Contract v1.3.0: the incident being declared over is now an event."""
+
+    def test_resolution_is_accepted(self):
+        w = worker_with(one(type="resolution",
+                            summary="Incident declared resolved",
+                            confidence=0.95))
+        out = w.extract(utt("Okay, declaring this resolved at 3:15."))
+        self.assertEqual(only(out).type, "resolution")
+        self.assertEqual(only(out).summary, "Incident declared resolved")
+
+    def test_resolution_carries_no_hypothesis_state_or_owner(self):
+        """It is about the incident, so all three are meaningless on it."""
+        w = worker_with(one(type="resolution", summary="Resolved",
+                            hypothesis_id="bad-deploy", new_state="confirmed",
+                            owner="Arjun"))
+        out = w.extract(utt("We're calling it, incident closed."))
+        self.assertIsNone(only(out).hypothesis_id)
+        self.assertIsNone(only(out).new_state)
+        self.assertIsNone(only(out).owner)
+
+    def test_a_resolution_needs_no_quote(self):
+        """Unlike status_change, it is not quote-gated. See CLAUDE.md."""
+        w = worker_with(one(type="resolution", summary="Resolved",
+                            evidence_quote=None))
+        out = w.extract(utt("Declaring this resolved."))
+        self.assertEqual(only(out).type, "resolution")
+        self.assertEqual(w.rejected_status_changes, 0)
 
 
 class TestFailureHandling(unittest.TestCase):
@@ -310,22 +440,24 @@ class TestFailureHandling(unittest.TestCase):
         w = worker_with(None, None)   # two unparsable responses
         out = w.extract(utt("hello"))
         self.assertTrue(out.degraded)
-        self.assertEqual(out.event.type, "noise")
-        self.assertEqual(out.event.confidence, 0.0)
+        # Exactly one noise event, never an empty list: "the model saw nothing
+        # here" and "the call failed" must not look the same downstream.
+        self.assertEqual(only(out).type, "noise")
+        self.assertEqual(only(out).confidence, 0.0)
         self.assertEqual(w._client.messages.calls, 2)
         self.assertEqual(w.retries, 1)
         self.assertEqual(w.degraded, 1)
 
     def test_retry_succeeds_on_the_second_attempt(self):
-        w = worker_with(None, fields(type="action", summary="Restarted workers"))
+        w = worker_with(None, one(type="action", summary="Restarted workers"))
         out = w.extract(utt("I restarted the workers."))
         self.assertFalse(out.degraded)
-        self.assertEqual(out.event.type, "action")
+        self.assertEqual(only(out).type, "action")
         self.assertEqual(out.attempts, 2)
 
     def test_transient_error_is_retried(self):
         err = anthropic.APIConnectionError(request=_request())
-        w = worker_with(err, fields(type="noise"))
+        w = worker_with(err, one(type="noise"))
         out = w.extract(utt("hello"))
         self.assertFalse(out.degraded)
         self.assertEqual(w._client.messages.calls, 2)
@@ -336,7 +468,7 @@ class TestFailureHandling(unittest.TestCase):
             response=httpx2.Response(401, request=_request()),
             body=None,
         )
-        w = worker_with(err, fields(type="action"))
+        w = worker_with(err, one(type="action"))
         out = w.extract(utt("hello"))
         self.assertTrue(out.degraded)
         self.assertEqual(w._client.messages.calls, 1)   # no wasted retry
@@ -346,7 +478,7 @@ class TestFailureHandling(unittest.TestCase):
         w = worker_with(ValueError("something absurd"), ValueError("again"))
         out = w.extract(utt("hello"))
         self.assertTrue(out.degraded)
-        self.assertEqual(out.event.type, "noise")
+        self.assertEqual(only(out).type, "noise")
 
     def test_latency_is_recorded_even_when_degraded(self):
         w = worker_with(None, None)
@@ -388,25 +520,26 @@ class TestSdkIntegration(unittest.TestCase):
 
     def test_request_uses_json_schema_structured_output(self):
         captured = {}
-        client = self._client(captured, {
+        client = self._client(captured, {"events": [{
             "type": "action", "summary": "Rolled back deploy",
             "hypothesis_id": None, "new_state": None, "owner": "Priya",
             "confidence": 0.9, "evidence_quote": None,
-        })
+        }]})
         w = ExtractionWorker(client=client, model="test-model",
                              on_log=lambda _m: None)
         out = w.extract(utt("I'm rolling back the deploy."))
 
-        self.assertEqual(out.event.type, "action")
-        self.assertEqual(out.event.owner, "Priya")
+        self.assertEqual(only(out).type, "action")
+        self.assertEqual(only(out).owner, "Priya")
 
         body = captured["body"]
         fmt = body["output_config"]["format"]
         self.assertEqual(fmt["type"], "json_schema")
         self.assertIs(fmt["schema"]["additionalProperties"], False)
-        # The schema, not the prompt, is what constrains the reply.
-        self.assertIn("properties", fmt["schema"])
-        self.assertIn("evidence_quote", fmt["schema"]["properties"])
+        # The schema, not the prompt, is what constrains the reply. The reply
+        # is now a list, so the per-event fields sit one level down.
+        self.assertIn("events", fmt["schema"]["properties"])
+        self.assertIn("evidence_quote", json.dumps(fmt["schema"]))
         self.assertEqual(body["model"], "test-model")
         self.assertEqual(
             body["system"][0]["cache_control"], {"type": "ephemeral"}
@@ -414,17 +547,42 @@ class TestSdkIntegration(unittest.TestCase):
 
     def test_guard_still_applies_to_a_real_sdk_response(self):
         captured = {}
-        client = self._client(captured, {
+        client = self._client(captured, {"events": [{
             "type": "status_change", "summary": "Cache ruled out",
             "hypothesis_id": "cache-eviction", "new_state": "ruled_out",
             "owner": None, "confidence": 0.95,
             "evidence_quote": "we ruled out the cache",
-        })
+        }]})
         w = ExtractionWorker(client=client, model="test-model",
                              on_log=lambda _m: None)
         out = w.extract(utt("The cache hit rate looks normal to me."))
-        self.assertEqual(out.event.type, "noise")
+        self.assertEqual(only(out).type, "noise")
         self.assertEqual(w.rejected_status_changes, 1)
+
+    def test_a_real_sdk_response_can_carry_two_events(self):
+        captured = {}
+        client = self._client(captured, {"events": [
+            {
+                "type": "status_change", "summary": "Deploy confirmed as cause",
+                "hypothesis_id": "bad-deploy", "new_state": "confirmed",
+                "owner": None, "confidence": 0.9,
+                "evidence_quote": "it was the deploy",
+            },
+            {
+                "type": "action", "summary": "Revert the retry change",
+                "hypothesis_id": None, "new_state": None, "owner": None,
+                "confidence": 0.9, "evidence_quote": None,
+            },
+        ]})
+        w = ExtractionWorker(client=client, model="test-model",
+                             on_log=lambda _m: None)
+        out = w.extract(utt(
+            "Yeah, it was the deploy. I'll revert the retry change properly."
+        ))
+        self.assertEqual([e.type for e in out.events],
+                         ["status_change", "action"])
+        self.assertEqual(w.multi_event_utterances, 1)
+        self.assertEqual(w.events_emitted, 2)
 
 
 # --------------------------------------------------------------------------
@@ -454,7 +612,7 @@ class TestAccuracy(unittest.TestCase):
         rows, strict, tolerant, false_pos, missed = [], 0, 0, 0, 0
         for c in LABELLED:
             out = worker.extract(utt(c.text), context)
-            got = out.event.type
+            got = only(out).type
             ok_strict = got == c.expected
             ok_tolerant = got in c.acceptable
             strict += ok_strict
@@ -475,8 +633,8 @@ class TestAccuracy(unittest.TestCase):
             mark = "OK  " if ok_s else ("~   " if ok_t else "MISS")
             flag = "  <-- FALSE POSITIVE" if (c.trap and got == "status_change") else ""
             print(f"{mark} want={c.expected:<14} got={got:<14} {c.text[:44]!r}{flag}")
-            if out.rejected_status_change:
-                print(f"       refused: {out.rejected_status_change[:60]}")
+            for rejection in out.rejections:
+                print(f"       refused: {rejection.reason[:60]}")
         print("-" * 74)
         print(f"strict accuracy      {strict}/{n}  ({100*strict/n:.0f}%)")
         print(f"tolerant accuracy    {tolerant}/{n}  ({100*tolerant/n:.0f}%)")

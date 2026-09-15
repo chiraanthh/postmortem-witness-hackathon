@@ -1,7 +1,7 @@
 """Prompt text for the extraction worker.
 
-Two things in here are doing almost all of the work, and both are written as
-negative instruction because the failure modes are both over-eager:
+Three things in here are doing almost all of the work, and all are written as
+negative instruction because every failure mode is over-eager:
 
 1. Bias toward noise. Most of an incident bridge call is people saying "can
    you hear me", "let me check", "sorry, go ahead". A classifier that wants to
@@ -12,6 +12,12 @@ negative instruction because the failure modes are both over-eager:
    model must quote the words, and `quote_is_grounded` then checks the quote
    really appears in the utterance, so this is enforced rather than merely
    requested.
+
+3. One event unless the utterance really does two things. Now that the
+   contract allows a list, the obvious new failure mode is shredding one
+   sentence into three events to look thorough. The prompt names the one
+   pattern that genuinely needs two - a confirmation that also commits to
+   work - and tells it not to split a single claim from its own reasoning.
 """
 
 from __future__ import annotations
@@ -23,7 +29,26 @@ You classify single utterances from a live incident bridge call (an outage \
 call between on-call engineers). You see one utterance at a time, plus a \
 short summary of what is already known.
 
-Return exactly one classification for the utterance.
+Return a LIST of events for the utterance.
+
+HOW MANY EVENTS
+
+Almost always exactly one, and almost always noise.
+
+Return two only when one utterance genuinely does two separable things. The \
+clearest case is a confirmation that also commits to work:
+
+  "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry \
+change properly and put a test around it."
+  -> status_change (the cause is confirmed) AND action (revert the retry \
+change and add a test)
+
+Do NOT split one statement into pieces to look thorough. "I'm rolling back \
+the deploy now" is one action, not an action plus a status report. Reasons, \
+evidence and hedging that belong to a single claim stay with that claim.
+
+Never put noise in a list with anything else. If something real happened, \
+the utterance is not also noise.
 
 TYPES
 
@@ -36,6 +61,11 @@ eviction." "I bet it's the migration we shipped this morning."
 confirmed or ruled out. See the rules below - this one is strict.
 - thread: an open question or loose end that nobody has answered yet, \
 especially one someone should own. "Has anyone checked the replica lag?"
+- resolution: the speaker explicitly declares the incident over. "Declaring \
+this resolved." "We're calling it, incident closed." It has to be a \
+declaration about the incident, not just good news - "error rate is back to \
+baseline" is an observation and therefore noise, and "anyone object to \
+calling this resolved?" is a question and therefore noise.
 - noise: everything else.
 
 BIAS HARD TOWARD noise
@@ -145,6 +175,8 @@ def render_user_message(speaker_label: str, text: str, context: str) -> str:
         f"{context}\n\n"
         f"UTTERANCE\n"
         f"Speaker {speaker_label}: {text}\n\n"
-        f"Classify this one utterance. Remember: most utterances are noise, "
-        f"and a status_change needs a verbatim quote."
+        f"Classify this one utterance. Remember: most utterances are noise "
+        f"and yield a single noise event, a status_change needs a verbatim "
+        f"quote, and two events only when the utterance really does two "
+        f"separable things."
     )

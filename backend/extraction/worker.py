@@ -1,6 +1,6 @@
-"""Turns one formatted utterance into one schema-valid event.
+"""Turns one formatted utterance into schema-valid events.
 
-Three rules shape this file:
+Four rules shape this file:
 
 - **Schema-valid or nothing.** The model is given a JSON schema through the
   SDK's structured output support, so it cannot reply in prose. We never ask
@@ -12,6 +12,12 @@ Three rules shape this file:
 - **A status change must have been spoken.** The model has to quote the words
   verbatim, and `quote_is_grounded` checks the quote against the utterance.
   A quote it cannot produce is a status change that did not happen.
+- **One utterance, many events** (contract v1.3.0). "Yeah, it was the deploy,
+  I'll revert it properly" is a status_change *and* an action. Returning one
+  event per utterance dropped the action with no trace, so `extract` now
+  returns a list. Empty and single-element lists are both valid; a degraded
+  call still returns exactly one noise event, because "the model saw nothing"
+  and "the call failed" must not look the same.
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ from backend.metrics import EXTRACT, Metrics, now_ms
 from backend.state.models import (
     Event,
     EventType,
+    ExtractedEvents,
     ExtractedFields,
     quote_is_grounded,
 )
@@ -80,18 +87,32 @@ class RunningContext:
         return any(h[0] == hypothesis_id for h in self.hypotheses)
 
 
+@dataclass(frozen=True)
+class Rejection:
+    """A claimed status_change that was refused, and what was claimed.
+
+    Kept in full rather than counted, because the interesting thing is not how
+    often the model tries to invent a state change but what it tries to invent.
+    """
+
+    reason: str
+    claimed_hypothesis_id: str | None = None
+    claimed_new_state: str | None = None
+    claimed_quote: str | None = None
+
+
 @dataclass
 class ExtractionOutcome:
     """One extraction, and everything worth knowing about how it went."""
 
-    event: Event
+    events: list[Event]
     latency_ms: float
     attempts: int
-    raw: ExtractedFields | None = None
+    raw: ExtractedEvents | None = None
 
-    # Set when a claimed status_change was refused, with the reason. This is
-    # the number that matters: it is the model trying to invent a state change.
-    rejected_status_change: str | None = None
+    # Every claimed status_change that was refused. This is the list that
+    # matters: it is the model trying to invent a state change.
+    rejections: list[Rejection] = field(default_factory=list)
 
     # Set when we fell back to noise because the call itself failed.
     degraded: bool = False
@@ -99,7 +120,12 @@ class ExtractionOutcome:
 
     @property
     def is_noise(self) -> bool:
-        return self.event.type == EventType.NOISE.value
+        """True when nothing of substance came out of the utterance."""
+        return all(e.type == EventType.NOISE.value for e in self.events)
+
+    @property
+    def substantive(self) -> list[Event]:
+        return [e for e in self.events if e.type != EventType.NOISE.value]
 
 
 def _slugify(text: str, fallback: str = "hypothesis") -> str:
@@ -138,6 +164,8 @@ class ExtractionWorker:
         self.retries = 0
         self.degraded = 0
         self.rejected_status_changes = 0
+        self.events_emitted = 0
+        self.multi_event_utterances = 0
         # A status change naming a hypothesis nobody put on the board. It is
         # accepted - the speaker did say it - but it is a dangling reference
         # until the state machine creates hypotheses on first reference.
@@ -157,43 +185,36 @@ class ExtractionWorker:
     def extract(
         self, utterance: Utterance, context: RunningContext | None = None
     ) -> ExtractionOutcome:
-        """Classify one utterance. Never raises."""
+        """Classify one utterance into zero or more events. Never raises."""
         context = context or RunningContext()
         started = now_ms()
         self.calls += 1
 
-        fields, attempts, error = self._call_with_retry(utterance, context)
+        parsed, attempts, error = self._call_with_retry(utterance, context)
         latency = now_ms() - started
         self.metrics.record(EXTRACT, latency)
 
-        if fields is None:
+        if parsed is None:
             self.degraded += 1
             self._log(
                 f"extraction failed for turn {utterance.turn_key} "
                 f"after {attempts} attempt(s): {error}. Falling back to noise."
             )
             return ExtractionOutcome(
-                event=self._noise_event(utterance),
+                events=[self._noise_event(utterance)],
                 latency_ms=latency,
                 attempts=attempts,
                 degraded=True,
                 error=error,
             )
 
-        cleaned, rejection = self._validate(fields, utterance, context)
-        if rejection is not None:
-            self.rejected_status_changes += 1
-            self._log(
-                f"refused status_change on turn {utterance.turn_key}: "
-                f"{rejection} | utterance: {utterance.text[:80]!r}"
-            )
-
+        events, rejections = self._resolve(parsed, utterance, context)
         return ExtractionOutcome(
-            event=self._build_event(cleaned, utterance),
+            events=events,
             latency_ms=latency,
             attempts=attempts,
-            raw=fields,
-            rejected_status_change=rejection,
+            raw=parsed,
+            rejections=rejections,
         )
 
     def extract_all(
@@ -201,11 +222,85 @@ class ExtractionWorker:
     ) -> list[ExtractionOutcome]:
         return [self.extract(u, context) for u in utterances]
 
+    # --- list assembly -----------------------------------------------------
+
+    def _resolve(
+        self,
+        parsed: ExtractedEvents,
+        utterance: Utterance,
+        context: RunningContext,
+    ) -> tuple[list[Event], list[Rejection]]:
+        """Validate every candidate and assemble the utterance's event list."""
+        kept: list[ExtractedFields] = []
+        rejections: list[Rejection] = []
+
+        for candidate in parsed.events:
+            cleaned, reason = self._validate(candidate, utterance, context)
+            if reason is None:
+                kept.append(cleaned)
+                continue
+
+            self.rejected_status_changes += 1
+            rejections.append(Rejection(
+                reason=reason,
+                claimed_hypothesis_id=candidate.hypothesis_id,
+                claimed_new_state=getattr(
+                    candidate.new_state, "value", candidate.new_state
+                ),
+                claimed_quote=candidate.evidence_quote,
+            ))
+            self._log(
+                f"refused status_change on turn {utterance.turn_key}: "
+                f"{reason} | utterance: {utterance.text[:80]!r}"
+            )
+            # `cleaned` is the refused candidate downgraded to noise. Keep it
+            # only if it is all this utterance had - then the utterance still
+            # shows up on the timeline as something that was said. Alongside a
+            # real sibling event it would just be a redundant noise row.
+            kept.append(cleaned)
+
+        events = [
+            self._build_event(f, utterance) for f in self._normalize(kept)
+        ]
+        if len(events) > 1:
+            self.multi_event_utterances += 1
+        self.events_emitted += len(events)
+        return events, rejections
+
+    @staticmethod
+    def _normalize(kept: list[ExtractedFields]) -> list[ExtractedFields]:
+        """Drop contradictions and duplicates from the candidate list.
+
+        Two shapes the model produces that are never right:
+
+        - noise sitting next to a real event. If something happened, the
+          utterance is not also noise. This is where a status_change refused
+          for a bad quote gets cleaned up, since the downgrade leaves a noise
+          entry behind.
+        - the same event twice, which happens when one statement gets split
+          into overlapping pieces.
+        """
+        substantive = [f for f in kept if f.type != "noise"]
+        if not substantive:
+            # All noise (or empty). Collapse to at most one, since a single
+            # utterance cannot be noise twice.
+            return kept[:1]
+
+        seen: set[tuple[str, str | None, str]] = set()
+        out: list[ExtractedFields] = []
+        for f in substantive:
+            key = (f.type, f.hypothesis_id, f.summary.strip().lower())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(f)
+        return out
+
     # --- model call --------------------------------------------------------
 
     def _call_with_retry(
         self, utterance: Utterance, context: RunningContext
-    ) -> tuple[ExtractedFields | None, int, str | None]:
+    ) -> tuple[ExtractedEvents | None, int, str | None]:
         user_message = render_user_message(
             utterance.speaker_label, utterance.text, context.render()
         )
@@ -230,7 +325,7 @@ class ExtractionWorker:
 
         return None, self.max_retries + 1, last_error
 
-    def _call_once(self, user_message: str) -> ExtractedFields | None:
+    def _call_once(self, user_message: str) -> ExtractedEvents | None:
         response = self.client.messages.parse(
             model=self.model,
             max_tokens=config.EXTRACTION_MAX_TOKENS,
@@ -245,7 +340,7 @@ class ExtractionWorker:
                 }
             ],
             messages=[{"role": "user", "content": user_message}],
-            output_format=ExtractedFields,
+            output_format=ExtractedEvents,
         )
         if response.stop_reason == "refusal":
             raise RuntimeError("model refused the request")
@@ -290,6 +385,13 @@ class ExtractionWorker:
             if not fields.hypothesis_id:
                 data["hypothesis_id"] = _slugify(fields.summary or utterance.text)
             data["new_state"] = None
+
+        elif fields.type == "resolution":
+            # A statement about the incident, not about a hypothesis or a
+            # person's workload, so none of these three mean anything on it.
+            data["hypothesis_id"] = None
+            data["new_state"] = None
+            data["owner"] = None
 
         else:
             # Only hypothesis and status_change may carry these.
@@ -364,8 +466,9 @@ class ExtractionWorker:
     def report(self) -> str:
         m = self.metrics
         return (
-            f"extraction: {self.calls} calls, {self.retries} retries, "
-            f"{self.degraded} degraded to noise, "
+            f"extraction: {self.calls} calls -> {self.events_emitted} events "
+            f"({self.multi_event_utterances} utterances yielded >1), "
+            f"{self.retries} retries, {self.degraded} degraded to noise, "
             f"{self.rejected_status_changes} status_changes refused, "
             f"{self.unknown_hypothesis_refs} unknown-hypothesis refs | "
             f"p50={m.p50(EXTRACT):.0f}ms p95={m.p95(EXTRACT):.0f}ms"

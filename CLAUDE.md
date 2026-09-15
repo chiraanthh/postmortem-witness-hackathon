@@ -28,8 +28,12 @@ no `hypothesis_id` and no `new_state`.
 
 Before this existed there was nowhere for that sentence to go, so the end of
 the call came out as noise and the exported postmortem had no closing entry.
-Like `status_change`, it must have been *said*: a call going quiet is not a
-resolution.
+
+It must have been *said* - a call going quiet is not a resolution - but
+unlike `status_change` it is not quote-gated in code, only in the prompt. A
+resolution is one unmistakable sentence at the end of a call rather than a
+claim about causation, and a second grounding gate would mostly reject valid
+ones. If it starts hallucinating resolutions, gate it.
 
 **One utterance now produces a list of events, not one.** A single line can
 genuinely be two things — "yeah, it was the deploy, I'll revert it properly

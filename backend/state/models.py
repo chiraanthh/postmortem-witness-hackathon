@@ -1,4 +1,4 @@
-"""Pydantic mirrors of shared/schema.json v1.2.0.
+"""Pydantic mirrors of shared/schema.json v1.3.0.
 
 shared/schema.json is the contract and this file follows it. If the two ever
 disagree, the schema wins and this file is the bug.
@@ -18,7 +18,7 @@ from typing import Literal, NamedTuple
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "shared" / "schema.json"
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 
 
 class TurnKey(NamedTuple):
@@ -42,6 +42,9 @@ class EventType(str, Enum):
     HYPOTHESIS = "hypothesis"
     STATUS_CHANGE = "status_change"
     THREAD = "thread"
+    # An explicit spoken declaration that the incident is over. About the
+    # incident, not about a hypothesis, so it carries no hypothesis_id.
+    RESOLUTION = "resolution"
     NOISE = "noise"
     # Emitted by us when the ASR reassigns a speaker. The extractor must never
     # produce this one, which is why ExtractedFields below excludes it.
@@ -96,7 +99,9 @@ class Event(BaseModel):
 
 # The extractor never chooses these: we already know them. Asking the model to
 # echo an event_id or a timestamp is a way to get a hallucinated one back.
-ExtractableType = Literal["action", "hypothesis", "status_change", "thread", "noise"]
+ExtractableType = Literal[
+    "action", "hypothesis", "status_change", "thread", "resolution", "noise"
+]
 
 
 class ExtractedFields(BaseModel):
@@ -110,9 +115,8 @@ class ExtractedFields(BaseModel):
 
     type: ExtractableType = Field(
         description=(
-            "What kind of event this utterance is. Use 'noise' unless it is "
-            "clearly one of the others. Most utterances on an incident call "
-            "are noise."
+            "What kind of event this is. Use 'noise' unless it is clearly one "
+            "of the others. Most utterances on an incident call are noise."
         )
     )
     summary: str = Field(
@@ -158,6 +162,29 @@ class ExtractedFields(BaseModel):
             "copied verbatim, in which the speaker states the change. If you "
             "cannot quote it word for word, it was not said, and the type is "
             "not status_change. Null for every other type."
+        ),
+    )
+
+
+class ExtractedEvents(BaseModel):
+    """What one utterance yielded. The model's whole reply.
+
+    A list, because a single spoken line can be two things at once - "yeah, it
+    was the deploy, I'll revert it properly" is a status_change and an action.
+    Returning one event per utterance silently dropped the second.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    events: list[ExtractedFields] = Field(
+        default_factory=list,
+        description=(
+            "One entry per distinct thing this utterance does. Usually "
+            "exactly one, and usually noise. Use two only when the utterance "
+            "genuinely does two separable things - do not split one statement "
+            "into pieces to look thorough. Never mix 'noise' with another "
+            "type in the same list: if anything real happened, it is not "
+            "noise."
         ),
     )
 
