@@ -160,3 +160,35 @@ Score the extractor against the hand-labelled set (needs ANTHROPIC_API_KEY):
 The extraction model is `EXTRACTION_MODEL` in the environment, defaulting to
 `claude-haiku-4-5-20251001`. It is resolved in `backend/config.py` and never
 named at a call site, so swapping models is one env var and no code change.
+
+**Extraction runs at temperature 0** (`EXTRACTION_TEMPERATURE`). Leave it
+there. It was unset once, which means the SDK sampled at 1.0, and three
+extraction runs over the *same recorded transcript* scored 8/10, 5/10 and
+7/10 against the demo script's embedded events. Nothing about the pipeline
+had changed. Every accuracy and recall number was unfalsifiable, because any
+regression could be waved away as sampling. Pinned, two consecutive runs
+classify all 41 utterances identically.
+
+`messages.parse()` has no `temperature` parameter in `anthropic==1.4.0`, so
+it is passed through `extra_body`. `TestSdkIntegration` asserts it reaches
+the request body, so an SDK upgrade that starts accepting it directly will
+fail loudly instead of quietly resuming sampling at 1.0.
+
+## Replaying the demo call
+
+The synthetic incident call is the only thing that measures recall, since it
+is the only audio whose contents are known. Three steps, and only the first
+two cost money:
+
+    python -m backend.tools.make_incident_audio        # cached, usually free
+    python -m backend.tools.spike_run --file demo/audio/incident_01.wav \
+        --out demo/runs/NAME                           # real time, ~4.5 min
+    python -m backend.tools.extract_run --run demo/runs/NAME
+    python -m backend.tools.score_diarization --run demo/runs/NAME \
+        --groundtruth demo/audio/incident_01.groundtruth.json
+    python -m backend.tools.score_recall --run demo/runs/NAME
+
+`score_recall` is the one that matters: the type distribution can look
+healthy while every real event is missed. If the script's timings are edited,
+run `retime_script` rather than hand-editing `start_ms` - the overlaps are
+solved from the measured synthesis durations, not guessed.
