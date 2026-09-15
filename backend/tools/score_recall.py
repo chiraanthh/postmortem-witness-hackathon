@@ -110,6 +110,20 @@ def score(results_path: Path) -> list[Result]:
     rows = json.loads(results_path.read_text(encoding="utf-8"))
     for r in rows:
         r["_norm"] = normalise(r["text"])
+        if "types" not in r:
+            # A run recorded before contract v1.3.0, one flat event per
+            # utterance. Lifted into the list shape so old runs stay
+            # comparable - the whole point of the score is the trend.
+            r["events"] = [{
+                "event_id": None,
+                "type": r["type"],
+                "summary": r.get("summary"),
+                "hypothesis_id": r.get("hypothesis_id"),
+                "new_state": r.get("new_state"),
+                "owner": r.get("owner"),
+                "confidence": r.get("confidence"),
+            }]
+            r["types"] = [r["type"]]
 
     out: list[Result] = []
     for known in KNOWN:
