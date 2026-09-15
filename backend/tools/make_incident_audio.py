@@ -1,6 +1,6 @@
 """Synthesises a scripted incident bridge call into one mixed-down WAV.
 
-    python -m backend.tools.make_incident_audio --script demo/script/incident.yaml
+    python -m backend.tools.make_incident_audio --script demo/script/incident_01.yaml
 
 What this is for: the AMI recording proved the pipeline runs, but it is a
 meeting about remote controls, so it exercises nothing the extractor cares
@@ -485,7 +485,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Synthesise a scripted incident call into one mixed WAV "
                     "plus a ground-truth JSON.",
     )
-    p.add_argument("--script", type=Path, default=Path("demo/script/incident.yaml"))
+    p.add_argument("--script", type=Path, default=Path("demo/script/incident_01.yaml"))
     p.add_argument("--out", type=Path, default=Path("demo/audio/incident_01.wav"))
     p.add_argument("--groundtruth", type=Path, default=None,
                    help="defaults to <out> with a .groundtruth.json suffix")
