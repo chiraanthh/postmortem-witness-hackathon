@@ -8,13 +8,39 @@ incident dashboard that exports a finished postmortem.
 - Backend is owned by Chiraanth. Frontend is owned by Disha.
   NEVER edit files outside your own directory.
 - shared/schema.json is a frozen contract. Do not modify it. If a change
-  seems necessary, stop and tell the user. It is currently at **v1.3.0**;
-  see "Contract v1.3.0" below for what changed and why.
+  seems necessary, stop and tell the user. It is currently at **v1.4.0**;
+  see "Contract v1.4.0" and "Contract v1.3.0" below for what changed and why.
 - No database. No auth. No user accounts. State is in memory, single incident.
 - Every LLM extraction call must return schema-valid JSON. "noise" is a
   valid and common answer. Never invent a hypothesis state change that was
   not explicitly spoken.
 - Measure latency at every stage and expose it. It is a demo feature.
+
+## Contract v1.4.0
+
+Three board-facing changes, agreed with both owners. Driven by the state
+machine: fields the live stream already carried have to be on the contract
+so a client that loads a fresh `IncidentState` sees the same board as one
+that streamed every `StateDiff` from the start.
+
+**`Hypothesis.implicit` (bool, default false, required).** True when the
+hypothesis was created by a `status_change` that named an id nobody had
+raised. False for every hypothesis that arrived as a `hypothesis` event.
+Must appear in both diffs and `snapshot()`.
+
+**`Action.unowned` (bool, default false, required).** True when no spoken
+owner was given and the utterance was not a first-person commitment, so
+ownership could not be derived from `speaker_label`. The demo call embeds
+exactly one of these. Must appear in both diffs and `snapshot()`.
+
+**`reconciliation` is a first-class `DiffOpKind`.** The teardown
+`SpeakerRevision` batch re-attributes every stored event by
+`(connection_epoch, turn_order)`, recomputes first-person action ownership,
+and emits one `DiffOp` whose `value` is a `ReconciliationSummary` listing
+every speaker and owner change. Live traffic is `StateDiff` (a list of
+ops), never a full `IncidentState`. A reconnect mid-call loads
+`IncidentState` once, then resumes on diffs — those two views must agree.
+`shared/events.ts` ships `applyDiff` / `applyDiffOp` for the frontend.
 
 ## Contract v1.3.0
 

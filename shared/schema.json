@@ -3,7 +3,7 @@
   "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
   "title": "Postmortem Witness contract",
   "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "$defs": {
     "EventType": {
       "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. resolution: an explicit spoken declaration that the incident is resolved; it is a statement about the incident, not about any one hypothesis, so it carries no hypothesis_id. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",
@@ -184,7 +184,8 @@
         "text",
         "state",
         "raised_by_label",
-        "raised_at_ms"
+        "raised_at_ms",
+        "implicit"
       ],
       "properties": {
         "hypothesis_id": {
@@ -211,6 +212,11 @@
             "null"
           ],
           "minimum": 0
+        },
+        "implicit": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when this hypothesis was created by a status_change that named an id nobody had raised. False for every hypothesis that arrived as a hypothesis event. Must be present in both live diffs and a fresh IncidentState snapshot - a client that loads mid-call must see the same board as one that streamed from the start."
         }
       }
     },
@@ -253,7 +259,8 @@
         "action_id",
         "text",
         "owner",
-        "at_ms"
+        "at_ms",
+        "unowned"
       ],
       "properties": {
         "action_id": {
@@ -271,6 +278,213 @@
         "at_ms": {
           "type": "integer",
           "minimum": 0
+        },
+        "unowned": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when no spoken owner was given and the utterance was not a first-person commitment (so ownership could not be derived from speaker_label). The demo call embeds exactly one of these. Must be present in both live diffs and a fresh IncidentState snapshot."
+        }
+      }
+    },
+    "DiffOpKind": {
+      "description": "One change the state machine emits over the WebSocket. The live board is updated by applying these in order; a client that missed the stream loads IncidentState instead. The two views must be equivalent.",
+      "enum": [
+        "upsert_hypothesis",
+        "upsert_thread",
+        "upsert_action",
+        "upsert_event",
+        "set_resolved",
+        "set_latency",
+        "reconciliation"
+      ]
+    },
+    "SpeakerChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "turn_key",
+        "event_id",
+        "previous_speaker_label",
+        "speaker_label"
+      ],
+      "description": "One timeline event whose speaker_label moved during a SpeakerRevision batch.",
+      "properties": {
+        "turn_key": {
+          "type": "string",
+          "description": "Composite turn key as 'e{epoch}/t{order}', e.g. 'e0/t28'."
+        },
+        "event_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "previous_speaker_label": {
+          "type": "string"
+        },
+        "speaker_label": {
+          "type": "string"
+        }
+      }
+    },
+    "OwnerChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "previous_owner",
+        "owner"
+      ],
+      "description": "A first-person action whose owner was recomputed after its speaker_label moved. Spoken names are never rewritten.",
+      "properties": {
+        "action_id": {
+          "type": "string"
+        },
+        "previous_owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ReconciliationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "events_touched",
+        "speakers",
+        "owners"
+      ],
+      "description": "What one SpeakerRevision batch changed on the board. Emitted once at teardown as a DiffOp with op=reconciliation. The live board ran on provisional labels; this is the correction.",
+      "properties": {
+        "events_touched": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "speakers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpeakerChange"
+          }
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OwnerChange"
+          }
+        }
+      }
+    },
+    "DiffOp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "value"
+      ],
+      "description": "One board change. Upserts carry a key; set_resolved, set_latency and reconciliation do not.",
+      "properties": {
+        "op": {
+          "$ref": "#/$defs/DiffOpKind"
+        },
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Map key for upsert_* ops (hypothesis_id, thread_id, action_id, or event_id). Null for set_resolved, set_latency, and reconciliation."
+        },
+        "value": {
+          "description": "Payload whose shape depends on op: Hypothesis, Thread, Action, Event, boolean (set_resolved), Latency, or ReconciliationSummary."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "reconciliation"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/ReconciliationSummary"
+              },
+              "key": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "set_resolved"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "boolean"
+              },
+              "key": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "set_latency"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/Latency"
+              },
+              "key": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "StateDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ops"
+      ],
+      "description": "A batch of DiffOps for the WebSocket. Apply in order. Never send a full IncidentState over the live channel - a client that reconnects mid-call loads IncidentState once, then resumes on diffs. snapshot() and the accumulation of every DiffOp from the start of the incident must produce identical boards.",
+      "properties": {
+        "ops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DiffOp"
+          }
         }
       }
     },
@@ -358,6 +572,9 @@
     },
     {
       "$ref": "#/$defs/IncidentState"
+    },
+    {
+      "$ref": "#/$defs/StateDiff"
     }
   ]
 }

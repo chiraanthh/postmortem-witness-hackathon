@@ -1,11 +1,24 @@
 /**
- * Postmortem Witness — shared event contract. v1.3.0
+ * Postmortem Witness — shared event contract. v1.4.0
  *
  * Generated from shared/schema.json. That file is the source of truth and is
  * FROZEN: if this file and the schema ever disagree, the schema wins.
  *
  * Frontend imports these types. Do not edit by hand to "fix" a mismatch —
  * raise it with the backend owner instead.
+ *
+ * CHANGED IN 1.4.0 — board fields the live stream already carried, now on
+ * the contract so a fresh load matches a streamed board:
+ *
+ *  1. `Hypothesis.implicit` — true when a status_change named an id nobody
+ *     had raised. Required; default false.
+ *  2. `Action.unowned` — true when no spoken owner and not a first-person
+ *     commitment. Required; default false.
+ *  3. `reconciliation` is a first-class DiffOpKind. The teardown
+ *     SpeakerRevision batch emits one DiffOp whose value is a
+ *     ReconciliationSummary listing every speaker and first-person-owner
+ *     change. Live traffic is StateDiff (ops), never a full IncidentState.
+ *     snapshot() and the accumulation of every DiffOp from t=0 must agree.
  *
  * CHANGED IN 1.3.0 — two things, one of which will break a naive list render:
  *
@@ -212,6 +225,11 @@ export interface Hypothesis {
   raised_by_label: string;
   raised_at_ms: number;
   resolved_at_ms: number | null;
+  /**
+   * True when created by a status_change that named an id nobody had raised.
+   * Required; false for every hypothesis that arrived as a hypothesis event.
+   */
+  implicit: boolean;
 }
 
 export interface Thread {
@@ -227,6 +245,11 @@ export interface Action {
   text: string;
   owner: string | null;
   at_ms: number;
+  /**
+   * True when no spoken owner was given and the utterance was not a
+   * first-person commitment. Required; false otherwise.
+   */
+  unowned: boolean;
 }
 
 /** Rolling p50 values in milliseconds, surfaced live in the dashboard. */
@@ -245,4 +268,145 @@ export interface IncidentState {
   threads: Thread[];
   actions: Action[];
   latency: Latency;
+}
+
+/**
+ * One change the state machine emits over the WebSocket. Apply in order.
+ * A client that missed the stream loads IncidentState once, then resumes on
+ * diffs — the two views must be equivalent.
+ */
+export type DiffOpKind =
+  | "upsert_hypothesis"
+  | "upsert_thread"
+  | "upsert_action"
+  | "upsert_event"
+  | "set_resolved"
+  | "set_latency"
+  | "reconciliation";
+
+/** One timeline event whose speaker_label moved during a revision batch. */
+export interface SpeakerChange {
+  /** Composite turn key as "e{epoch}/t{order}", e.g. "e0/t28". */
+  turn_key: string;
+  event_id: string;
+  previous_speaker_label: string;
+  speaker_label: string;
+}
+
+/**
+ * A first-person action whose owner was recomputed after its speaker_label
+ * moved. Spoken names are never rewritten.
+ */
+export interface OwnerChange {
+  action_id: string;
+  previous_owner: string | null;
+  owner: string | null;
+}
+
+/**
+ * What one SpeakerRevision batch changed on the board. Emitted once at
+ * teardown as a DiffOp with op="reconciliation".
+ */
+export interface ReconciliationSummary {
+  events_touched: number;
+  speakers: SpeakerChange[];
+  owners: OwnerChange[];
+}
+
+export interface DiffOp {
+  op: DiffOpKind;
+  /**
+   * Map key for upsert_* ops (hypothesis_id, thread_id, action_id, or
+   * event_id). Null for set_resolved, set_latency, and reconciliation.
+   */
+  key?: string | null;
+  /**
+   * Payload shape depends on op: Hypothesis, Thread, Action, Event,
+   * boolean (set_resolved), Latency, or ReconciliationSummary.
+   */
+  value: unknown;
+}
+
+export type ReconciliationDiffOp = DiffOp & {
+  op: "reconciliation";
+  key?: null;
+  value: ReconciliationSummary;
+};
+
+export function isReconciliation(op: DiffOp): op is ReconciliationDiffOp {
+  return op.op === "reconciliation";
+}
+
+/**
+ * A batch of DiffOps for the WebSocket. Never send a full IncidentState over
+ * the live channel — reconnect mid-call loads IncidentState once, then
+ * resumes on diffs.
+ */
+export interface StateDiff {
+  ops: DiffOp[];
+}
+
+/**
+ * Fold a DiffOp into a client-side board. Upserts overwrite by key;
+ * reconciliation is informational once the preceding upserts have landed
+ * (the machine already applied the corrections before emitting the summary).
+ */
+export function applyDiffOp(
+  state: IncidentState,
+  op: DiffOp,
+): IncidentState {
+  switch (op.op) {
+    case "upsert_hypothesis": {
+      const h = op.value as Hypothesis;
+      const rest = state.hypotheses.filter((x) => x.hypothesis_id !== h.hypothesis_id);
+      return { ...state, hypotheses: [...rest, h] };
+    }
+    case "upsert_thread": {
+      const t = op.value as Thread;
+      const rest = state.threads.filter((x) => x.thread_id !== t.thread_id);
+      return { ...state, threads: [...rest, t] };
+    }
+    case "upsert_action": {
+      const a = op.value as Action;
+      const rest = state.actions.filter((x) => x.action_id !== a.action_id);
+      return { ...state, actions: [...rest, a] };
+    }
+    case "upsert_event": {
+      const e = op.value as Event;
+      const rest = state.timeline.filter((x) => x.event_id !== e.event_id);
+      return { ...state, timeline: [...rest, e] };
+    }
+    case "set_resolved":
+      return { ...state, resolved: op.value as boolean };
+    case "set_latency":
+      return { ...state, latency: op.value as Latency };
+    case "reconciliation":
+      // Corrections were already applied as upsert_* ops ahead of this
+      // summary. The summary is for the UI to show what moved.
+      return state;
+    default: {
+      const _exhaustive: never = op.op;
+      return state;
+    }
+  }
+}
+
+export function applyDiff(state: IncidentState, diff: StateDiff): IncidentState {
+  return diff.ops.reduce(applyDiffOp, state);
+}
+
+export function emptyIncidentState(
+  incident_id: string,
+  started_at_ms = 0,
+): IncidentState {
+  return {
+    incident_id,
+    started_at_ms,
+    resolved: false,
+    timeline: [],
+    hypotheses: [],
+    threads: [],
+    actions: [],
+    latency: { asr_ms: 0, extract_ms: 0, e2e_ms: 0 },
+  };
 }
