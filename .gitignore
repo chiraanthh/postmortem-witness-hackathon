@@ -6,6 +6,10 @@ venv/
 node_modules/
 dist/
 demo/audio/*.wav
+# Regenerable from the script for the price of the cache; the cache itself is
+# 6MB of base64 and the run dirs are raw protocol logs.
+demo/audio/.tts_cache/
+demo/runs/
 .DS_Store
 .pytest_cache/
 *.egg-info/
