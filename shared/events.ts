@@ -1,11 +1,22 @@
 /**
- * Postmortem Witness — shared event contract. v1.4.0
+ * Postmortem Witness — shared event contract. v1.5.0
  *
  * Generated from shared/schema.json. That file is the source of truth and is
  * FROZEN: if this file and the schema ever disagree, the schema wins.
  *
  * Frontend imports these types. Do not edit by hand to "fix" a mismatch —
  * raise it with the backend owner instead.
+ *
+ * CHANGED IN 1.5.0 — silence accounting + claim contradictions, one bump:
+ *
+ *  1. Event gains addressee, answers_thread_id, claim_subject,
+ *     claim_assertion, claim_quote (all required nullable). claim_quote is
+ *     non-null when claim_subject is set (schema allOf + worker).
+ *  2. Thread gains asked_at_ms, addressee, answered, answered_at_ms,
+ *     unanswered_age_ms for directed questions and resolution ageing.
+ *  3. DiffOpKind adds silence_summary (SilenceSummary at resolution) and
+ *     contradiction (Contradiction pairs). IncidentState carries silence
+ *     (null until then) and contradictions[].
  *
  * CHANGED IN 1.4.0 — board fields the live stream already carried, now on
  * the contract so a fresh load matches a streamed board:
@@ -143,6 +154,36 @@ export interface Event {
    * silently changing what the user already read.
    */
   previous_speaker_label: string | null;
+
+  /**
+   * Named person a direct question is addressed to. Null when not a directed
+   * question or no name was spoken.
+   */
+  addressee: string | null;
+
+  /**
+   * When set, this event explicitly answers that open thread. Never inferred
+   * by the client — only when extraction linked it.
+   */
+  answers_thread_id: string | null;
+
+  /**
+   * Subject of a factual claim; prefer an existing hypothesis_id when the
+   * claim is about a board hypothesis. Null when the event makes no claim.
+   */
+  claim_subject: string | null;
+
+  /**
+   * Short normalized assertion about claim_subject. Null when claim_subject
+   * is null.
+   */
+  claim_assertion: string | null;
+
+  /**
+   * Verbatim quote grounding the claim. Required non-null when claim_subject
+   * is set. Null otherwise.
+   */
+  claim_quote: string | null;
 }
 
 /** A `status_change` event always carries both hypothesis_id and new_state. */
@@ -238,6 +279,22 @@ export interface Thread {
   owner: string | null;
   opened_at_ms: number;
   closed: boolean;
+  /** When the question/thread was opened. Usually equals opened_at_ms. */
+  asked_at_ms: number;
+  /** Named person asked, if any. */
+  addressee: string | null;
+  /**
+   * True only when an event with answers_thread_id linked to this thread
+   * arrived.
+   */
+  answered: boolean;
+  /** When answered; null while unanswered. */
+  answered_at_ms: number | null;
+  /**
+   * Milliseconds unanswered at resolution, or null while the incident is
+   * open (client may compute live as clock_ms - asked_at_ms).
+   */
+  unanswered_age_ms: number | null;
 }
 
 export interface Action {
@@ -259,6 +316,46 @@ export interface Latency {
   e2e_ms: number;
 }
 
+/** One unanswered thread listed inside a SilenceSummary. */
+export interface SilenceOpenThread {
+  thread_id: string;
+  text: string;
+  asked_at_ms: number;
+  addressee: string | null;
+  unanswered_age_ms: number | null;
+}
+
+/**
+ * Postmortem silence stats. Emitted once at resolution as DiffOp
+ * op="silence_summary".
+ */
+export interface SilenceSummary {
+  questions_asked: number;
+  questions_unanswered: number;
+  longest_unanswered_ms: number;
+  /** Named people who were asked something and never answered. */
+  unanswered_addressees: string[];
+  open_threads: SilenceOpenThread[];
+}
+
+/** One side of a detected factual contradiction. */
+export interface ContradictionClaim {
+  /** Composite turn key as "e{epoch}/t{order}", e.g. "e0/t28". */
+  turn_key: string;
+  event_id: string;
+  speaker_label: string;
+  timestamp_ms: number;
+  assertion: string;
+  quote: string;
+}
+
+/** Two claims about the same subject that disagree. */
+export interface Contradiction {
+  subject: string;
+  earlier: ContradictionClaim;
+  later: ContradictionClaim;
+}
+
 export interface IncidentState {
   incident_id: string;
   started_at_ms: number;
@@ -268,6 +365,10 @@ export interface IncidentState {
   threads: Thread[];
   actions: Action[];
   latency: Latency;
+  /** Null until resolution emits silence_summary. */
+  silence: SilenceSummary | null;
+  /** Detected claim contradictions, in emission order. */
+  contradictions: Contradiction[];
 }
 
 /**
@@ -282,7 +383,9 @@ export type DiffOpKind =
   | "upsert_event"
   | "set_resolved"
   | "set_latency"
-  | "reconciliation";
+  | "reconciliation"
+  | "silence_summary"
+  | "contradiction";
 
 /** One timeline event whose speaker_label moved during a revision batch. */
 export interface SpeakerChange {
@@ -317,12 +420,14 @@ export interface DiffOp {
   op: DiffOpKind;
   /**
    * Map key for upsert_* ops (hypothesis_id, thread_id, action_id, or
-   * event_id). Null for set_resolved, set_latency, and reconciliation.
+   * event_id). Null for set_resolved, set_latency, reconciliation,
+   * silence_summary, and contradiction.
    */
   key?: string | null;
   /**
    * Payload shape depends on op: Hypothesis, Thread, Action, Event,
-   * boolean (set_resolved), Latency, or ReconciliationSummary.
+   * boolean (set_resolved), Latency, ReconciliationSummary, SilenceSummary,
+   * or Contradiction.
    */
   value: unknown;
 }
@@ -333,8 +438,28 @@ export type ReconciliationDiffOp = DiffOp & {
   value: ReconciliationSummary;
 };
 
+export type SilenceSummaryDiffOp = DiffOp & {
+  op: "silence_summary";
+  key?: null;
+  value: SilenceSummary;
+};
+
+export type ContradictionDiffOp = DiffOp & {
+  op: "contradiction";
+  key?: null;
+  value: Contradiction;
+};
+
 export function isReconciliation(op: DiffOp): op is ReconciliationDiffOp {
   return op.op === "reconciliation";
+}
+
+export function isSilence(op: DiffOp): op is SilenceSummaryDiffOp {
+  return op.op === "silence_summary";
+}
+
+export function isContradiction(op: DiffOp): op is ContradictionDiffOp {
+  return op.op === "contradiction";
 }
 
 /**
@@ -350,6 +475,7 @@ export interface StateDiff {
  * Fold a DiffOp into a client-side board. Upserts overwrite by key;
  * reconciliation is informational once the preceding upserts have landed
  * (the machine already applied the corrections before emitting the summary).
+ * silence_summary is stored on the board; contradiction is appended.
  */
 export function applyDiffOp(
   state: IncidentState,
@@ -384,8 +510,16 @@ export function applyDiffOp(
       // Corrections were already applied as upsert_* ops ahead of this
       // summary. The summary is for the UI to show what moved.
       return state;
+    case "silence_summary":
+      return { ...state, silence: op.value as SilenceSummary };
+    case "contradiction":
+      return {
+        ...state,
+        contradictions: [...state.contradictions, op.value as Contradiction],
+      };
     default: {
       const _exhaustive: never = op.op;
+      void _exhaustive;
       return state;
     }
   }
@@ -408,5 +542,7 @@ export function emptyIncidentState(
     threads: [],
     actions: [],
     latency: { asr_ms: 0, extract_ms: 0, e2e_ms: 0 },
+    silence: null,
+    contradictions: [],
   };
 }

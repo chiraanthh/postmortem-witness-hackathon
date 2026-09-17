@@ -5,16 +5,63 @@ multi-speaker outage call, extracts structured events, and renders a live
 incident dashboard that exports a finished postmortem.
 
 ## Hard rules
-- Backend is owned by Chiraanth. Frontend is owned by Disha.
-  NEVER edit files outside your own directory.
+- Chiraanth owns the whole project (backend and frontend). The earlier
+  directory-ownership split with Disha is retired — edit any path that
+  the work requires.
 - shared/schema.json is a frozen contract. Do not modify it. If a change
-  seems necessary, stop and tell the user. It is currently at **v1.4.0**;
-  see "Contract v1.4.0" and "Contract v1.3.0" below for what changed and why.
+  seems necessary, stop and tell the user. It is currently at **v1.5.0**;
+  see "Contract v1.5.0", "Contract v1.4.0" and "Contract v1.3.0" below for
+  what changed and why.
 - No database. No auth. No user accounts. State is in memory, single incident.
 - Every LLM extraction call must return schema-valid JSON. "noise" is a
   valid and common answer. Never invent a hypothesis state change that was
   not explicitly spoken.
 - Measure latency at every stage and expose it. It is a demo feature.
+
+## Contract v1.5.0
+
+One coherent bump covering silence accounting and claim contradictions so
+we do not need a follow-up v1.6. `shared/schema.json` is the source of
+truth; `shared/events.ts` and `backend/state/models.py` follow it. The
+default extraction model stays Haiku (`EXTRACTION_MODEL` /
+`claude-haiku-4-5-20251001`) — this bump does not change prompts or the
+state machine yet, only the wire types those features will need.
+
+**Event claim and address fields (required nullable).** Five fields land on
+every event so a mid-call snapshot matches a fully streamed board:
+
+- `addressee` — named person a direct question is addressed to; null when
+  not a directed question or no name was spoken.
+- `answers_thread_id` — set only when extraction explicitly links this
+  event as the answer to an open thread. Clients must never infer it.
+- `claim_subject` / `claim_assertion` / `claim_quote` — factual claim
+  triple. Prefer an existing `hypothesis_id` as subject when the claim is
+  about a board hypothesis. All three are null when there is no claim;
+  when `claim_subject` is set, `claim_assertion` and `claim_quote` are
+  required non-null (schema `allOf` plus worker enforcement).
+
+**Thread silence fields (required).** Threads carry directed-question and
+ageing metadata alongside the existing `thread_id` / `text` / `owner` /
+`opened_at_ms` / `closed`:
+
+- `asked_at_ms` — when the question opened (usually equals `opened_at_ms`).
+- `addressee` — named person asked, if any.
+- `answered` — true only when an event with matching `answers_thread_id`
+  arrived (default false).
+- `answered_at_ms` — when answered; null while unanswered.
+- `unanswered_age_ms` — age at resolution for still-open/unanswered
+  threads, else null while the incident is open (client may compute live
+  as `clock_ms - asked_at_ms`).
+
+**`silence_summary` DiffOp.** Emitted once at resolution. Value is a
+`SilenceSummary`: question counts, longest unanswered duration, named
+addressees who never answered, and the still-open threads. Stored on
+`IncidentState.silence` (null until then).
+
+**`contradiction` DiffOp.** Value is a `Contradiction` (`subject`,
+`earlier` / `later` `ContradictionClaim`s keyed by turn). Appended to
+`IncidentState.contradictions`. Claims come from the Event claim fields
+above; detection logic is not part of this bump.
 
 ## Contract v1.4.0
 
@@ -105,16 +152,23 @@ server-side, so we use the header. The key comes from `.env`, never a literal.
 Audio goes as **binary** WebSocket frames of 50–1000 ms each. Anything else
 gets transcoded to that before it is sent.
 
-**The two-phase final.** A turn does not finalize once, it finalizes twice.
-With `format_turns=true` you first get an unformatted final
+**The two-phase final (docs vs our config).** AssemblyAI's docs still describe
+a two-phase final with `format_turns=true`: an unformatted final first
 (`end_of_turn=true`, `turn_is_formatted=false`), then a second message for the
-*same* `turn_order` carrying the punctuated and cased text
-(`turn_is_formatted=true`).
+*same* `turn_order` with punctuated/cased text (`turn_is_formatted=true`).
 
-  - Latency is measured against the **unformatted** final. That is the moment
-    the words actually existed.
-  - Extraction runs **only** on the formatted final. Never extract twice off
-    one turn, and never extract off an unformatted one.
+**That second phase is all we ever see.** On both the AMI spike and
+`incident_01.wav`, every `end_of_turn=true` message arrives with
+`turn_is_formatted=true`. The unformatted pass does not occur on our
+configuration (`format_turns=true`, speaker labels on, current streaming
+model). `dropped_unformatted` stays 0 and `turn_event_shapes` never lists
+`formatted=false`.
+
+  - **ASR latency** is therefore audio-chunk-sent → **formatted** final
+    received. Timing the unformatted final left `asr_ms` with zero samples.
+  - Extraction still runs **only** on the formatted final. If an unformatted
+    pass ever reappears, do not extract from it, and do not double-count ASR
+    on the formatted follow-up.
 
 **SpeakerRevision.** Diarization is not final when you first receive it. The
 server sends `SpeakerRevision` messages that retroactively reassign the
@@ -163,12 +217,17 @@ stays null until a roll-call pass fills it in. That pass is not built yet.
 
 **Relevant SDK surface** (`assemblyai==1.3.0`, `assemblyai.streaming.v3`):
 `StreamingClient`, `StreamingClientOptions`, `StreamingParameters`
-(`speaker_labels`, `max_speakers`, `format_turns`, `sample_rate`, `encoding`),
-`StreamingEvents.{Begin,Turn,SpeakerRevision,Termination,Error}`, `TurnEvent`
-(`turn_order`, `turn_is_formatted`, `end_of_turn`, `transcript`,
+(`speaker_labels`, `max_speakers`, `format_turns`, `sample_rate`, `encoding`,
+`keyterms_prompt`), `StreamingEvents.{Begin,Turn,SpeakerRevision,Termination,Error}`,
+`TurnEvent` (`turn_order`, `turn_is_formatted`, `end_of_turn`, `transcript`,
 `speaker_label`, `words`), `Word` (`text`, `start`, `end`, `confidence`,
 `word_is_final`, `speaker`), `SpeakerRevisionEvent.revisions` of
 `SpeakerRevisionItem` (`turn_order`, `speaker_label`, `words`).
+
+**Keyterms.** v3 streaming supports word boosting via `keyterms_prompt` (array
+of strings, max 100, each ≤50 chars). Loaded from `demo/script/keyterms.txt`,
+not hardcoded. Docs:
+https://www.assemblyai.com/docs/streaming/prompting-and-keyterms
 
 ## Local setup (backend)
     python3.11 -m venv venv && source venv/bin/activate

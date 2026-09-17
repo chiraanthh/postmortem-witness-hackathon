@@ -3,7 +3,7 @@
   "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
   "title": "Postmortem Witness contract",
   "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "$defs": {
     "EventType": {
       "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. resolution: an explicit spoken declaration that the incident is resolved; it is a statement about the incident, not about any one hypothesis, so it carries no hypothesis_id. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",
@@ -41,7 +41,12 @@
         "new_state",
         "owner",
         "confidence",
-        "previous_speaker_label"
+        "previous_speaker_label",
+        "addressee",
+        "answers_thread_id",
+        "claim_subject",
+        "claim_assertion",
+        "claim_quote"
       ],
       "properties": {
         "event_id": {
@@ -123,6 +128,41 @@
             "null"
           ],
           "description": "Null except on speaker_amended events, where it holds the label the turn used to be attributed to. Lets the UI show the correction as a correction ('A -> B') instead of silently swapping it."
+        },
+        "addressee": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Named person a direct question is addressed to. Null when not a directed question or no name was spoken."
+        },
+        "answers_thread_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "When set, this event explicitly answers that open thread. Never inferred by the client \u2014 only when extraction linked it."
+        },
+        "claim_subject": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Subject of a factual claim; prefer an existing hypothesis_id when the claim is about a board hypothesis. Null when the event makes no claim."
+        },
+        "claim_assertion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Short normalized assertion about claim_subject. Null when claim_subject is null."
+        },
+        "claim_quote": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Verbatim quote from the utterance grounding the claim. Required non-null when claim_subject is set. Null otherwise. Worker also enforces this if a client skips schema validation."
         }
       },
       "allOf": [
@@ -171,6 +211,32 @@
             },
             "required": [
               "previous_speaker_label"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "claim_subject": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "claim_subject"
+            ]
+          },
+          "then": {
+            "properties": {
+              "claim_assertion": {
+                "type": "string"
+              },
+              "claim_quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "claim_assertion",
+              "claim_quote"
             ]
           }
         }
@@ -228,7 +294,12 @@
         "text",
         "owner",
         "opened_at_ms",
-        "closed"
+        "closed",
+        "asked_at_ms",
+        "addressee",
+        "answered",
+        "answered_at_ms",
+        "unanswered_age_ms"
       ],
       "properties": {
         "thread_id": {
@@ -249,6 +320,39 @@
         },
         "closed": {
           "type": "boolean"
+        },
+        "asked_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "When the question/thread was opened. Usually equals opened_at_ms."
+        },
+        "addressee": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Named person asked, if any."
+        },
+        "answered": {
+          "type": "boolean",
+          "default": false,
+          "description": "True only when an event with answers_thread_id linked to this thread arrived."
+        },
+        "answered_at_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "When answered; null while unanswered."
+        },
+        "unanswered_age_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Milliseconds the thread sat unanswered at resolution (or null while the incident is open \u2014 the client may compute live as clock_ms - asked_at_ms). Set on snapshot at resolution for still-open/unanswered threads."
         }
       }
     },
@@ -295,7 +399,9 @@
         "upsert_event",
         "set_resolved",
         "set_latency",
-        "reconciliation"
+        "reconciliation",
+        "silence_summary",
+        "contradiction"
       ]
     },
     "SpeakerChange": {
@@ -380,6 +486,135 @@
         }
       }
     },
+    "SilenceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "questions_asked",
+        "questions_unanswered",
+        "longest_unanswered_ms",
+        "unanswered_addressees",
+        "open_threads"
+      ],
+      "description": "Postmortem silence stats. Emitted once at resolution as a DiffOp with op=silence_summary. Counts questions asked on the call and which named addressees never answered.",
+      "properties": {
+        "questions_asked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "questions_unanswered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "longest_unanswered_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unanswered_addressees": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named people who were asked something and never answered."
+        },
+        "open_threads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "thread_id",
+              "text",
+              "asked_at_ms",
+              "addressee",
+              "unanswered_age_ms"
+            ],
+            "properties": {
+              "thread_id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "asked_at_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "addressee": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "unanswered_age_ms": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "ContradictionClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "turn_key",
+        "event_id",
+        "speaker_label",
+        "timestamp_ms",
+        "assertion",
+        "quote"
+      ],
+      "description": "One side of a detected factual contradiction.",
+      "properties": {
+        "turn_key": {
+          "type": "string",
+          "description": "Composite turn key as 'e{epoch}/t{order}', e.g. 'e0/t28'."
+        },
+        "event_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "speaker_label": {
+          "type": "string"
+        },
+        "timestamp_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "assertion": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        }
+      }
+    },
+    "Contradiction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "earlier",
+        "later"
+      ],
+      "description": "Two claims about the same subject that disagree. Emitted as a DiffOp with op=contradiction.",
+      "properties": {
+        "subject": {
+          "type": "string"
+        },
+        "earlier": {
+          "$ref": "#/$defs/ContradictionClaim"
+        },
+        "later": {
+          "$ref": "#/$defs/ContradictionClaim"
+        }
+      }
+    },
     "DiffOp": {
       "type": "object",
       "additionalProperties": false,
@@ -387,7 +622,7 @@
         "op",
         "value"
       ],
-      "description": "One board change. Upserts carry a key; set_resolved, set_latency and reconciliation do not.",
+      "description": "One board change. Upserts carry a key; set_resolved, set_latency, reconciliation, silence_summary, and contradiction do not.",
       "properties": {
         "op": {
           "$ref": "#/$defs/DiffOpKind"
@@ -397,10 +632,10 @@
             "string",
             "null"
           ],
-          "description": "Map key for upsert_* ops (hypothesis_id, thread_id, action_id, or event_id). Null for set_resolved, set_latency, and reconciliation."
+          "description": "Map key for upsert_* ops (hypothesis_id, thread_id, action_id, or event_id). Null for set_resolved, set_latency, reconciliation, silence_summary, and contradiction."
         },
         "value": {
-          "description": "Payload whose shape depends on op: Hypothesis, Thread, Action, Event, boolean (set_resolved), Latency, or ReconciliationSummary."
+          "description": "Payload whose shape depends on op: Hypothesis, Thread, Action, Event, boolean (set_resolved), Latency, ReconciliationSummary, SilenceSummary, or Contradiction."
         }
       },
       "allOf": [
@@ -419,6 +654,50 @@
             "properties": {
               "value": {
                 "$ref": "#/$defs/ReconciliationSummary"
+              },
+              "key": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "silence_summary"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/SilenceSummary"
+              },
+              "key": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "contradiction"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/Contradiction"
               },
               "key": {
                 "type": "null"
@@ -523,7 +802,9 @@
         "hypotheses",
         "threads",
         "actions",
-        "latency"
+        "latency",
+        "silence",
+        "contradictions"
       ],
       "properties": {
         "incident_id": {
@@ -562,6 +843,24 @@
         },
         "latency": {
           "$ref": "#/$defs/Latency"
+        },
+        "silence": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SilenceSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null until resolution emits silence_summary. Required on every IncidentState so a mid-call load and a streamed board agree."
+        },
+        "contradictions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contradiction"
+          },
+          "description": "Detected claim contradictions, in emission order. Empty until the first contradiction DiffOp."
         }
       }
     }

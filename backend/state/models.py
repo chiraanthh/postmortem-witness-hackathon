@@ -1,4 +1,4 @@
-"""Pydantic mirrors of shared/schema.json v1.4.0.
+"""Pydantic mirrors of shared/schema.json v1.5.0.
 
 shared/schema.json is the contract and this file follows it. If the two ever
 disagree, the schema wins and this file is the bug.
@@ -18,7 +18,7 @@ from typing import Literal, NamedTuple
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "shared" / "schema.json"
-SCHEMA_VERSION = "1.4.0"
+SCHEMA_VERSION = "1.5.0"
 
 
 class TurnKey(NamedTuple):
@@ -76,6 +76,11 @@ class Event(BaseModel):
     owner: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)
     previous_speaker_label: str | None = None
+    addressee: str | None = None
+    answers_thread_id: str | None = None
+    claim_subject: str | None = None
+    claim_assertion: str | None = None
+    claim_quote: str | None = None
 
     @property
     def turn_key(self) -> TurnKey:
@@ -92,6 +97,11 @@ class Event(BaseModel):
         if self.type == EventType.SPEAKER_AMENDED.value:
             if not self.previous_speaker_label:
                 raise ValueError("speaker_amended requires previous_speaker_label")
+        if self.claim_subject is not None:
+            if self.claim_assertion is None:
+                raise ValueError("claim_subject requires claim_assertion")
+            if self.claim_quote is None:
+                raise ValueError("claim_subject requires claim_quote")
         return self
 
 
@@ -170,6 +180,35 @@ class ExtractedFields(BaseModel):
             "cannot quote it word for word, it was not said, and the type is "
             "not status_change. Null for every other type."
         ),
+    )
+    addressee: str | None = Field(
+        default=None,
+        description=(
+            "Named person if this is a direct question to someone. Null "
+            "otherwise."
+        ),
+    )
+    answers_thread_id: str | None = Field(
+        default=None,
+        description=(
+            "Exact open-thread id from context this utterance answers. Null "
+            "if not answering."
+        ),
+    )
+    claim_subject: str | None = Field(
+        default=None,
+        description=(
+            "Subject of a factual claim; prefer board hypothesis id. Null if "
+            "none."
+        ),
+    )
+    claim_assertion: str | None = Field(
+        default=None,
+        description="What is asserted about claim_subject. Null if none.",
+    )
+    claim_quote: str | None = Field(
+        default=None,
+        description="Verbatim quote grounding the claim. Null if no claim.",
     )
 
 

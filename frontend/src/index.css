@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: radial-gradient(
+        120% 90% at 82% -10%,
+        rgba(236, 106, 44, 0.16) 0%,
+        rgba(236, 106, 44, 0) 42%
+      ),
+      #0a0806;
+    color: #f6ede1;
+    font-family: theme("fontFamily.sans");
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer components {
+  /* The recessed dark cards from the reference: warm near-black, hairline
+     border, soft inner top-light. */
+  .panel {
+    @apply rounded-2xl border border-line bg-panel/90 shadow-panel;
+  }
+
+  .panel-tight {
+    @apply rounded-xl border border-line bg-panel2/80;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line2 bg-raised/70
+      px-2.5 py-1 text-[11px] font-medium tracking-wide text-inkMute;
+  }
+
+  .kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-inkFaint;
+  }
+
+  /* LED / dot-matrix numerals used for the headline incident stats. */
+  .led {
+    font-family: theme("fontFamily.led");
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 14px rgba(236, 106, 44, 0.28);
+  }
+
+  .pill-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2
+      text-[13px] font-semibold transition-colors;
+  }
+}
+
+@layer utilities {
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: #3a2c1c transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: #33271a;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb:hover {
+    background: #4a3822;
+    background-clip: content-box;
+  }
+
+  .grain-none {
+    background-image: none;
+  }
+}

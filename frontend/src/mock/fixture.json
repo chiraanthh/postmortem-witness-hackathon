@@ -1,0 +1,456 @@
+{
+  "incident_id": "INC-2026-0915-PAYMENTS",
+  "note": "Mock incident replay. Each item wraps a schema-valid Event (shared/schema.json v1.1.0) with emit_at_ms for wall-clock scheduling only. speaker_name stays null throughout, per contract.",
+  "messages": [
+    {
+      "emit_at_ms": 600,
+      "message": {
+        "event_id": "8f2a1c00-0001-4a10-8a01-000000000000",
+        "type": "noise",
+        "turn_order": 0,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 600,
+        "text": "Okay, everyone's on? Good — let's get into it.",
+        "summary": "Bridge opened",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.55,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 3000,
+      "message": {
+        "event_id": "8f2a1c00-0002-4a10-8a01-000000000000",
+        "type": "thread",
+        "turn_order": 1,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 3000,
+        "text": "Why is every checkout returning a 500 right now?",
+        "summary": "Checkout returning 500s across the board",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.9,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 6200,
+      "message": {
+        "event_id": "8f2a1c00-0003-4a10-8a01-000000000000",
+        "type": "action",
+        "turn_order": 2,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 6200,
+        "text": "Marco, spin up a Sev-1 and start the incident doc.",
+        "summary": "Open Sev-1, start incident doc",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": "Marco",
+        "confidence": 0.93,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 9300,
+      "message": {
+        "event_id": "8f2a1c00-0004-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 3,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 9300,
+        "text": "First guess — the database connection pool is maxed out.",
+        "summary": "DB connection pool exhausted",
+        "hypothesis_id": "h-dbpool",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.78,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 12500,
+      "message": {
+        "event_id": "8f2a1c00-0005-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 4,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 12500,
+        "text": "Honestly this smells like the upstream payment provider, not us.",
+        "summary": "Upstream payment provider failing",
+        "hypothesis_id": "h-provider",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.7,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 15600,
+      "message": {
+        "event_id": "8f2a1c00-0006-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 5,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 15600,
+        "text": "Did the four-c-two-one-f deploy this morning touch the payment path?",
+        "summary": "Recent deploy 4c21f regression",
+        "hypothesis_id": "h-deploy",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.66,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 18800,
+      "message": {
+        "event_id": "8f2a1c00-0007-4a10-8a01-000000000000",
+        "type": "thread",
+        "turn_order": 6,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 18800,
+        "text": "Did anyone actually page the database on-call?",
+        "summary": "Paged the DB on-call?",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.84,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 22000,
+      "message": {
+        "event_id": "8f2a1c00-0008-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 7,
+        "speaker_label": "D",
+        "speaker_name": null,
+        "timestamp_ms": 22000,
+        "text": "Session store might be flapping — Redis looked shaky an hour ago.",
+        "summary": "Redis / session store flapping",
+        "hypothesis_id": "h-redis",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.72,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 25200,
+      "message": {
+        "event_id": "8f2a1c00-0009-4a10-8a01-000000000000",
+        "type": "status_change",
+        "turn_order": 8,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 25200,
+        "text": "That deploy went out Tuesday, this started an hour ago. Rule it out.",
+        "summary": "Ruled out — deploy 4c21f, timeline doesn't line up",
+        "hypothesis_id": "h-deploy",
+        "new_state": "ruled_out",
+        "owner": null,
+        "confidence": 0.9,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 28400,
+      "message": {
+        "event_id": "8f2a1c00-0010-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 9,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 28400,
+        "text": "Could the gateway TLS certificate have expired overnight?",
+        "summary": "Gateway TLS certificate expired",
+        "hypothesis_id": "h-tls",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.6,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 30800,
+      "message": {
+        "event_id": "8f2a1c00-0005-4a10-8a01-000000000000",
+        "type": "speaker_amended",
+        "turn_order": 4,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 12500,
+        "text": "Honestly this smells like the upstream payment provider, not us.",
+        "summary": "Speaker reattributed A to C",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.95,
+        "previous_speaker_label": "A"
+      }
+    },
+    {
+      "emit_at_ms": 34000,
+      "message": {
+        "event_id": "8f2a1c00-0011-4a10-8a01-000000000000",
+        "type": "status_change",
+        "turn_order": 10,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 34000,
+        "text": "Cert's valid through December, I just checked it. Not TLS.",
+        "summary": "Ruled out — TLS cert valid through December",
+        "hypothesis_id": "h-tls",
+        "new_state": "ruled_out",
+        "owner": null,
+        "confidence": 0.92,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 37200,
+      "message": {
+        "event_id": "8f2a1c00-0012-4a10-8a01-000000000000",
+        "type": "hypothesis",
+        "turn_order": 11,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 37200,
+        "text": "Long shot — is DNS resolution to the provider failing?",
+        "summary": "DNS resolution to provider failing",
+        "hypothesis_id": "h-dns",
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.58,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 40400,
+      "message": {
+        "event_id": "8f2a1c00-0013-4a10-8a01-000000000000",
+        "type": "thread",
+        "turn_order": 12,
+        "speaker_label": "D",
+        "speaker_name": null,
+        "timestamp_ms": 40400,
+        "text": "What's our actual error rate right now — is it a hundred percent or partial?",
+        "summary": "Actual error rate right now — total or partial?",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.86,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 43600,
+      "message": {
+        "event_id": "8f2a1c00-0014-4a10-8a01-000000000000",
+        "type": "status_change",
+        "turn_order": 13,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 43600,
+        "text": "DNS resolves fine from all three boxes. It's not that.",
+        "summary": "Ruled out — DNS resolves fine from all boxes",
+        "hypothesis_id": "h-dns",
+        "new_state": "ruled_out",
+        "owner": null,
+        "confidence": 0.9,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 46800,
+      "message": {
+        "event_id": "8f2a1c00-0015-4a10-8a01-000000000000",
+        "type": "action",
+        "turn_order": 14,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 46800,
+        "text": "Someone pull up the provider's status page and confirm what we're seeing.",
+        "summary": "Pull up provider status page and confirm",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.8,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 49200,
+      "message": {
+        "event_id": "8f2a1c00-0016-4a10-8a01-000000000000",
+        "type": "noise",
+        "turn_order": 15,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 49200,
+        "text": "Yeah, give me a second, loading it now.",
+        "summary": "—",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.5,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 52400,
+      "message": {
+        "event_id": "8f2a1c00-0017-4a10-8a01-000000000000",
+        "type": "thread",
+        "turn_order": 16,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 52400,
+        "text": "Who owns customer comms — is a status post going out?",
+        "summary": "Customer comms owner — is a post going out?",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.82,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 55600,
+      "message": {
+        "event_id": "8f2a1c00-0018-4a10-8a01-000000000000",
+        "type": "action",
+        "turn_order": 17,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 55600,
+        "text": "Priya, roll the provider config back to last-known-good.",
+        "summary": "Roll back provider config to last-known-good",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": "Priya",
+        "confidence": 0.94,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 58000,
+      "message": {
+        "event_id": "8f2a1c00-0002-4a10-8a01-000000000000",
+        "type": "speaker_amended",
+        "turn_order": 1,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 3000,
+        "text": "Why is every checkout returning a 500 right now?",
+        "summary": "Speaker reattributed A to B",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.95,
+        "previous_speaker_label": "A"
+      }
+    },
+    {
+      "emit_at_ms": 61200,
+      "message": {
+        "event_id": "8f2a1c00-0019-4a10-8a01-000000000000",
+        "type": "action",
+        "turn_order": 18,
+        "speaker_label": "D",
+        "speaker_name": null,
+        "timestamp_ms": 61200,
+        "text": "Sana, once we're rolled back, drain and restart the payment workers.",
+        "summary": "Drain and restart payment workers after rollback",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": "Sana",
+        "confidence": 0.9,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 65000,
+      "message": {
+        "event_id": "8f2a1c00-0020-4a10-8a01-000000000000",
+        "type": "noise",
+        "turn_order": 19,
+        "speaker_label": "B",
+        "speaker_name": null,
+        "timestamp_ms": 65000,
+        "text": "Okay the provider status page is loading… hang on.",
+        "summary": "—",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.5,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 69000,
+      "message": {
+        "event_id": "8f2a1c00-0021-4a10-8a01-000000000000",
+        "type": "status_change",
+        "turn_order": 20,
+        "speaker_label": "C",
+        "speaker_name": null,
+        "timestamp_ms": 69000,
+        "text": "Their status page just went red — provider-side outage, confirmed.",
+        "summary": "Confirmed — provider-side outage (status page red)",
+        "hypothesis_id": "h-provider",
+        "new_state": "confirmed",
+        "owner": null,
+        "confidence": 0.96,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 73000,
+      "message": {
+        "event_id": "8f2a1c00-0022-4a10-8a01-000000000000",
+        "type": "action",
+        "turn_order": 21,
+        "speaker_label": "A",
+        "speaker_name": null,
+        "timestamp_ms": 73000,
+        "text": "Marco, keep the incident doc updated and start the customer comms draft.",
+        "summary": "Update incident doc, draft customer comms",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": "Marco",
+        "confidence": 0.88,
+        "previous_speaker_label": null
+      }
+    },
+    {
+      "emit_at_ms": 77000,
+      "message": {
+        "event_id": "8f2a1c00-0023-4a10-8a01-000000000000",
+        "type": "noise",
+        "turn_order": 22,
+        "speaker_label": "D",
+        "speaker_name": null,
+        "timestamp_ms": 77000,
+        "text": "Rollback's applied — error rate's already starting to drop.",
+        "summary": "—",
+        "hypothesis_id": null,
+        "new_state": null,
+        "owner": null,
+        "confidence": 0.6,
+        "previous_speaker_label": null
+      }
+    }
+  ]
+}
