@@ -5,7 +5,7 @@ answered, while the incident call is still happening.
 
 - **Live demo:** https://web-production-88f09e.up.railway.app
 - **Demo video:** _TODO_
-- **Repo:** https://github.com/chiraanthh/postmortem-witness
+- **Repo:** https://github.com/chiraanthh/postmortem-witness-hackathon
 
 Built for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai) on
 lablab.ai. Path: Realtime Speech-to-Text API with our own orchestration
@@ -172,7 +172,7 @@ python -m backend.tools.spike_run --file demo/audio/incident_01.wav \
 ## Run locally
 
 ```bash
-git clone https://github.com/chiraanthh/postmortem-witness.git
+git clone https://github.com/chiraanthh/postmortem-witness-hackathon.git
 cd postmortem-witness
 python3.11 -m venv venv && source venv/bin/activate
 pip install -r backend/requirements.txt
