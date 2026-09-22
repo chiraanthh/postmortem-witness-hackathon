@@ -10,6 +10,7 @@ pydantic==2.13.5
 websockets==17.1
 fastapi==0.141.1
 uvicorn==0.53.0
+python-multipart==0.0.20
 
 # Note: anthropic 1.x is built on httpx2, not httpx. It arrives as a
 # transitive dependency; anything constructing a transport or an SDK
