@@ -1,0 +1,15 @@
+# Gitleaks config for Postmortem Witness.
+# DiffOp.wire field `key` holds event/hypothesis UUIDs — not API secrets.
+# The recorded live-pipeline fixture is full of those keys.
+
+title = "postmortem-witness"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Board DiffOp keys and event_ids in fixtures are UUIDs, not credentials"
+paths = [
+  '''(^|/)frontend/src/replay/incident_01\.fixture\.json$''',
+  '''(^|/)frontend/src/mock/fixture\.json$''',
+]
