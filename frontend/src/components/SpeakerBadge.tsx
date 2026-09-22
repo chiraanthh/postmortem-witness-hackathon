@@ -11,6 +11,9 @@ const LABEL_TINT: Record<string, string> = {
   B: "border-amber-400/40 text-amber-300 bg-amber-400/10",
   C: "border-rose-400/40 text-rose-300 bg-rose-400/10",
   D: "border-teal-400/40 text-teal-300 bg-teal-400/10",
+  // Provisional diarization before a label lands — not a person on call.
+  PENDING: "border-line2 text-inkFaint bg-raised/60",
+  "?": "border-line2 text-inkFaint bg-raised/60",
 };
 
 function tint(label: string): string {

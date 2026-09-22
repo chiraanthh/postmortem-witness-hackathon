@@ -92,9 +92,20 @@ class TestTwoPhaseFinal(Harness):
         # Still open until something ends it, but the formatted text is in.
         (utt,) = self.stream.buffer.flush()
         self.assertEqual(utt.text, "The API is down.")
-        # Timed once, not twice.
+        # Timed once, not twice — formatted follow-up must not re-record ASR.
         self.assertEqual(self.stream.metrics.count(ASR), 1)
         self.assertEqual(self.stream.turns_seen, 1)
+
+    def test_formatted_only_final_is_timed_as_asr(self):
+        """Our live config never sends the unformatted pass."""
+        self.fire(turn_event(0, "The API is down.", formatted=True, speaker="A",
+                             words=[word("The", 0, 100), word("down.", 100, 5000)]))
+        self.assertEqual(self.stream.metrics.count(ASR), 1)
+        self.assertEqual(self.stream.metrics.count(FORMAT), 0)
+        self.assertEqual(self.stream.turns_seen, 1)
+        (_, latency), = self.turns
+        self.assertIsNotNone(latency)
+        self.assertGreaterEqual(latency, 0.0)
 
     def test_format_phase_is_timed_separately(self):
         self.fire(turn_event(1, "raw", formatted=False, speaker="A"))
@@ -109,7 +120,7 @@ class TestTwoPhaseFinal(Harness):
         self.assertEqual(self.stream.metrics.count(ASR), 0)
 
     def test_asr_latency_is_positive_and_bounded(self):
-        self.fire(turn_event(0, "hello", formatted=False, speaker="A",
+        self.fire(turn_event(0, "hello", formatted=True, speaker="A",
                              words=[word("hello", 0, 5000)]))
         (_, latency), = self.turns
         self.assertIsNotNone(latency)
@@ -237,6 +248,87 @@ class TestReconnectNumbering(Harness):
         self.set_epoch(2)
         self.fire(turn_event(9, "Hello.", formatted=True, speaker="A"))
         self.assertEqual(self.turns[-1][0].connection_epoch, 2)
+
+
+class TestStaleClient(Harness):
+    """Late events from a previous StreamingClient must not land on a new epoch."""
+
+    def test_stale_client_turn_is_ignored(self):
+        live = object()
+        stale = object()
+        self.stream._client = live  # type: ignore[assignment]
+        self.set_epoch(1)
+
+        self.stream._handle_turn(
+            stale,  # type: ignore[arg-type]
+            turn_event(0, "From the dead socket.", formatted=True, speaker="A"),
+        )
+        self.assertEqual(self.turns, [])
+        self.assertEqual(self.utterances, [])
+        self.assertEqual(self.stream.turns_seen, 0)
+
+        self.stream._handle_turn(
+            live,  # type: ignore[arg-type]
+            turn_event(0, "From the live socket.", formatted=True, speaker="B"),
+        )
+        self.assertEqual(len(self.turns), 1)
+        self.assertEqual(self.turns[0][0].connection_epoch, 1)
+        self.assertEqual(self.turns[0][0].text, "From the live socket.")
+
+    def test_stale_client_revision_is_ignored(self):
+        live = object()
+        stale = object()
+        self.stream._client = live  # type: ignore[assignment]
+
+        self.stream._handle_turn(
+            live,  # type: ignore[arg-type]
+            turn_event(0, "First thing.", formatted=True, speaker="A"),
+        )
+        self.stream._handle_revision(
+            stale,  # type: ignore[arg-type]
+            SpeakerRevisionEvent(
+                revisions=[
+                    SpeakerRevisionItem(turn_order=0, speaker_label="B", words=[])
+                ]
+            ),
+        )
+        self.assertEqual(self.amendments, [])
+        self.assertEqual(
+            self.stream.buffer.utterance_for_turn(TurnKey(0, 0)).speaker_label, "A"
+        )
+
+    def test_after_client_swap_old_identity_is_stale(self):
+        """Simulated reconnect: swap `_client` object identity, bump epoch."""
+        old = object()
+        new = object()
+        self.stream._client = old  # type: ignore[assignment]
+        self.stream._handle_turn(
+            old,  # type: ignore[arg-type]
+            turn_event(0, "Epoch zero.", formatted=True, speaker="A"),
+        )
+        self.assertEqual(self.turns[-1][0].connection_epoch, 0)
+
+        # Reconnect replaces the client and bumps the epoch.
+        self.stream._client = new  # type: ignore[assignment]
+        self.set_epoch(1)
+
+        self.stream._handle_turn(
+            old,  # type: ignore[arg-type]
+            turn_event(0, "Late from old client.", formatted=True, speaker="A"),
+        )
+        self.assertEqual(len(self.turns), 1)  # only the epoch-0 turn
+
+        self.stream._handle_turn(
+            new,  # type: ignore[arg-type]
+            turn_event(0, "Epoch one.", formatted=True, speaker="B"),
+        )
+        self.assertEqual(len(self.turns), 2)
+        self.assertEqual(self.turns[-1][0].connection_epoch, 1)
+        self.assertEqual(self.turns[-1][0].text, "Epoch one.")
+
+        # None (unit-test harness style) is never treated as stale.
+        self.fire(turn_event(1, "Harness None client.", formatted=True, speaker="C"))
+        self.assertEqual(self.turns[-1][0].connection_epoch, 1)
 
 
 if __name__ == "__main__":

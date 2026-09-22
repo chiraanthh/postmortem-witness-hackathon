@@ -10,6 +10,15 @@ Contract v1.4.0: `Hypothesis.implicit` and `Action.unowned` appear in both
 `StateDiff` upserts and `snapshot()`. A client that loads fresh must see
 identical state to one that streamed from the start — see
 `boards_equivalent` / the accumulated-diff test.
+
+Contract v1.5.0 silence: threads carry asked/answered ages; resolution emits
+`silence_summary`. `answered` means a reply linked via `answers_thread_id`;
+when answered we also set `closed=True` so the thread leaves the open list.
+`closed` is otherwise independent of silence accounting.
+
+Contract v1.5.0 contradiction: grounded claim triples on substantive events
+are indexed by subject; incompatible polarity (healthy vs pressure lexicon)
+emits a `contradiction` DiffOp. status_change / thread never carry claims.
 """
 
 from __future__ import annotations
@@ -40,6 +49,23 @@ _FIRST_PERSON = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+
+# Contradiction polarity: incompatible ONLY via these lexicons. Same-polarity
+# restatements and unmatched hedges do not flag.
+_HEALTHY_PHRASES = (
+    "nowhere near",
+    "forty percent",
+    "40%",
+    "utilisation low",
+    "utilization low",
+)
+_HEALTHY_WORDS = ("healthy", "fine", "normal")
+_PRESSURE_PHRASES = (
+    "under pressure",
+    "near the limit",
+    "hammering connections",
+)
+_PRESSURE_WORDS = ("pressure", "exhausted", "saturated")
 
 
 # --- board entities --------------------------------------------------------
@@ -75,9 +101,92 @@ class Thread:
     owner: str | None
     opened_at_ms: int
     closed: bool = False
+    # Contract v1.5.0 silence fields.
+    asked_at_ms: int = 0
+    addressee: str | None = None
+    answered: bool = False
+    answered_at_ms: int | None = None
+    # Set at resolution for still-unanswered threads; null while the call is open.
+    unanswered_age_ms: int | None = None
 
     def to_contract(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass
+class SilenceOpenThread:
+    thread_id: str
+    text: str
+    asked_at_ms: int
+    addressee: str | None
+    unanswered_age_ms: int | None
+
+    def to_contract(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class SilenceSummary:
+    """Postmortem silence stats. Emitted once at resolution."""
+
+    questions_asked: int = 0
+    questions_unanswered: int = 0
+    longest_unanswered_ms: int = 0
+    unanswered_addressees: list[str] = field(default_factory=list)
+    open_threads: list[SilenceOpenThread] = field(default_factory=list)
+
+    def to_contract(self) -> dict[str, Any]:
+        return {
+            "questions_asked": self.questions_asked,
+            "questions_unanswered": self.questions_unanswered,
+            "longest_unanswered_ms": self.longest_unanswered_ms,
+            "unanswered_addressees": list(self.unanswered_addressees),
+            "open_threads": [t.to_contract() for t in self.open_threads],
+        }
+
+
+@dataclass
+class ContradictionClaim:
+    """One side of a detected factual contradiction (contract shape)."""
+
+    turn_key: str
+    event_id: str
+    speaker_label: str
+    timestamp_ms: int
+    assertion: str
+    quote: str
+
+    def to_contract(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class Contradiction:
+    """Two claims about the same subject that disagree."""
+
+    subject: str
+    earlier: ContradictionClaim
+    later: ContradictionClaim
+
+    def to_contract(self) -> dict[str, Any]:
+        return {
+            "subject": self.subject,
+            "earlier": self.earlier.to_contract(),
+            "later": self.later.to_contract(),
+        }
+
+
+@dataclass
+class StoredClaim:
+    """Machine-internal claim index entry for contradiction detection."""
+
+    subject: str
+    assertion: str
+    quote: str
+    event_id: str
+    turn_key: TurnKey
+    speaker_label: str
+    timestamp_ms: int
 
 
 @dataclass
@@ -124,6 +233,8 @@ OpKind = Literal[
     "set_resolved",
     "set_latency",
     "reconciliation",
+    "silence_summary",
+    "contradiction",
 ]
 
 
@@ -196,7 +307,10 @@ def _wire_value(value: Any) -> Any:
         return None
     if isinstance(value, Event):
         return value.model_dump()
-    if isinstance(value, (Hypothesis, Thread, Action, Latency)):
+    if isinstance(
+        value,
+        (Hypothesis, Thread, Action, Latency, SilenceSummary, Contradiction),
+    ):
         # Contract shape only. first_person stays machine-internal.
         return value.to_contract()
     if isinstance(value, ReconciliationSummary):
@@ -225,6 +339,69 @@ def _wire_value(value: Any) -> Any:
     return value
 
 
+def _normalize_subject(subject: str) -> str:
+    return subject.strip().lower()
+
+
+def _subject_lookup_keys(subject: str) -> list[str]:
+    """Exact normalized key plus hypothesis_id alt forms (h- prefix)."""
+    key = _normalize_subject(subject)
+    keys = [key]
+    if key.startswith("h-") and len(key) > 2:
+        keys.append(key[2:])
+    else:
+        keys.append(f"h-{key}")
+    # Dedupe while preserving order.
+    seen: set[str] = set()
+    out: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+def _term_present(text: str, term: str) -> bool:
+    if " " in term or "%" in term:
+        return term in text
+    return bool(re.search(rf"\b{re.escape(term)}\b", text))
+
+
+def claim_polarity(assertion: str, quote: str) -> str | None:
+    """Return 'healthy', 'pressure', or None when lexicon does not decide."""
+    text = f"{assertion} {quote}".lower()
+    healthy = any(_term_present(text, t) for t in _HEALTHY_PHRASES) or any(
+        _term_present(text, t) for t in _HEALTHY_WORDS
+    )
+    # "nowhere near the limit" is healthy; do not also score "near the limit".
+    pressure_phrases = _PRESSURE_PHRASES
+    if "nowhere near" in text:
+        pressure_phrases = tuple(
+            p for p in _PRESSURE_PHRASES if p != "near the limit"
+        )
+    pressure = any(_term_present(text, t) for t in pressure_phrases) or any(
+        _term_present(text, t) for t in _PRESSURE_WORDS
+    )
+    if healthy and not pressure:
+        return "healthy"
+    if pressure and not healthy:
+        return "pressure"
+    return None
+
+
+def claims_incompatible(
+    earlier: StoredClaim | ContradictionClaim,
+    later_assertion: str,
+    later_quote: str,
+) -> bool:
+    """True only when both sides match opposite polarity lexicons."""
+    a = claim_polarity(earlier.assertion, earlier.quote)
+    b = claim_polarity(later_assertion, later_quote)
+    if a is None or b is None:
+        return False
+    return a != b
+
+
 def empty_incident_state(
     incident_id: str, started_at_ms: int = 0
 ) -> dict[str, Any]:
@@ -237,6 +414,8 @@ def empty_incident_state(
         "threads": [],
         "actions": [],
         "latency": {"asr_ms": 0.0, "extract_ms": 0.0, "e2e_ms": 0.0},
+        "silence": None,
+        "contradictions": [],
     }
 
 
@@ -266,6 +445,13 @@ def apply_diff_op(state: dict[str, Any], op: dict[str, Any]) -> dict[str, Any]:
         return {**state, "latency": value}
     if kind == "reconciliation":
         return state
+    if kind == "silence_summary":
+        return {**state, "silence": value}
+    if kind == "contradiction":
+        return {
+            **state,
+            "contradictions": list(state.get("contradictions") or []) + [value],
+        }
     raise ValueError(f"unknown DiffOpKind: {kind!r}")
 
 
@@ -288,6 +474,10 @@ def boards_equivalent(a: dict[str, Any], b: dict[str, Any]) -> bool:
     if a["resolved"] != b["resolved"]:
         return False
     if a["latency"] != b["latency"]:
+        return False
+    if a.get("silence") != b.get("silence"):
+        return False
+    if list(a.get("contradictions") or []) != list(b.get("contradictions") or []):
         return False
 
     def bag(rows: list[dict], key: str) -> dict[str, dict]:
@@ -351,6 +541,10 @@ class IncidentMachine:
         self.resolved: bool = False
         self.frozen: bool = False
         self.latency = Latency()
+        self.silence: SilenceSummary | None = None
+        self.contradictions: list[Contradiction] = []
+        # subject (normalized) -> claims seen so far, for polarity checks.
+        self._claims_by_subject: dict[str, list[StoredClaim]] = {}
 
     # --- ingest ------------------------------------------------------------
 
@@ -378,7 +572,12 @@ class IncidentMachine:
         handler = handlers.get(event.type)
         if handler is None:
             return StateDiff()
-        return handler(event)
+        diff = handler(event)
+        # Any linked answer marks the thread answered (and closes it for display).
+        if event.type != EventType.RESOLUTION.value:
+            diff.extend(self._maybe_answer_thread(event))
+        diff.extend(self._maybe_contradiction(event))
+        return diff
 
     def apply_many(self, events: Iterable[Event]) -> StateDiff:
         diff = StateDiff()
@@ -559,8 +758,8 @@ class IncidentMachine:
         return StateDiff(ops=ops)
 
     def _on_thread(self, event: Event) -> StateDiff:
-        # thread_id is the event's identity. A later event that "resolves" a
-        # thread will need its own path; nothing here auto-closes.
+        # thread_id is the event's identity. Answering is a separate path via
+        # answers_thread_id (sets answered + closed); nothing here auto-closes.
         thread_id = event.event_id
         thread = Thread(
             thread_id=thread_id,
@@ -568,6 +767,11 @@ class IncidentMachine:
             owner=event.owner,
             opened_at_ms=event.timestamp_ms,
             closed=False,
+            asked_at_ms=event.timestamp_ms,
+            addressee=event.addressee,
+            answered=False,
+            answered_at_ms=None,
+            unanswered_age_ms=None,
         )
         self.threads[thread_id] = thread
         stored = self._store_event(event)
@@ -601,13 +805,153 @@ class IncidentMachine:
         ])
 
     def _on_resolution(self, event: Event) -> StateDiff:
+        """Freeze the board and emit silence accounting for unanswered threads.
+
+        Before freeze: every still-unanswered thread gets unanswered_age_ms =
+        resolution_ts - asked_at_ms, then a silence_summary DiffOp.
+        answered != closed historically; for open-list UX we set closed=True
+        when a thread is answered (see _maybe_answer_thread). Unanswered
+        threads stay closed=False through resolution.
+        """
+        ops: list[DiffOp] = []
+        resolution_ts = event.timestamp_ms
+
+        unanswered: list[Thread] = []
+        for thread in self.threads.values():
+            if thread.answered:
+                continue
+            thread.unanswered_age_ms = max(0, resolution_ts - thread.asked_at_ms)
+            ops.append(DiffOp(
+                op="upsert_thread", key=thread.thread_id, value=thread,
+            ))
+            unanswered.append(thread)
+
+        addressees: list[str] = []
+        seen: set[str] = set()
+        for t in unanswered:
+            if t.addressee and t.addressee not in seen:
+                seen.add(t.addressee)
+                addressees.append(t.addressee)
+
+        ages = [t.unanswered_age_ms or 0 for t in unanswered]
+        summary = SilenceSummary(
+            questions_asked=len(self.threads),
+            questions_unanswered=len(unanswered),
+            longest_unanswered_ms=max(ages) if ages else 0,
+            unanswered_addressees=addressees,
+            open_threads=[
+                SilenceOpenThread(
+                    thread_id=t.thread_id,
+                    text=t.text,
+                    asked_at_ms=t.asked_at_ms,
+                    addressee=t.addressee,
+                    unanswered_age_ms=t.unanswered_age_ms,
+                )
+                for t in unanswered
+            ],
+        )
+        self.silence = summary
+        ops.append(DiffOp(op="silence_summary", value=summary))
+
         self.resolved = True
         self.frozen = True
         stored = self._store_event(event)
+        ops.append(DiffOp(op="upsert_event", key=stored.event_id, value=stored))
+        ops.append(DiffOp(op="set_resolved", value=True))
+        return StateDiff(ops=ops)
+
+    def _maybe_answer_thread(self, event: Event) -> StateDiff:
+        """Mark a thread answered when answers_thread_id points at it.
+
+        answered means the question got a linked reply. We also set closed=True
+        so the thread leaves the open-threads list; silence accounting uses
+        answered, not closed. Proximity / topic similarity never answers.
+        """
+        tid = event.answers_thread_id
+        if not tid:
+            return StateDiff()
+        thread = self.threads.get(tid)
+        if thread is None or thread.answered:
+            return StateDiff()
+        thread.answered = True
+        thread.answered_at_ms = event.timestamp_ms
+        thread.closed = True
+        thread.unanswered_age_ms = None
         return StateDiff(ops=[
-            DiffOp(op="upsert_event", key=stored.event_id, value=stored),
-            DiffOp(op="set_resolved", value=True),
+            DiffOp(op="upsert_thread", key=tid, value=thread),
         ])
+
+    def _maybe_contradiction(self, event: Event) -> StateDiff:
+        """Index grounded claims; emit contradiction when polarity flips.
+
+        status_change and thread never contribute claims (worker clears them).
+        Same-polarity restatements and unmatched text do not flag.
+        """
+        if event.type in (
+            EventType.STATUS_CHANGE.value,
+            EventType.THREAD.value,
+            EventType.NOISE.value,
+            EventType.SPEAKER_AMENDED.value,
+        ):
+            return StateDiff()
+
+        subject = event.claim_subject
+        assertion = event.claim_assertion
+        quote = event.claim_quote
+        if not subject or not assertion or not quote:
+            return StateDiff()
+
+        # Prefer the stored event when present (stable event_id / turn key).
+        stored = self.timeline.get(event.event_id, event)
+        subject_key = _normalize_subject(subject)
+        earlier_claims: list[StoredClaim] = []
+        seen_ids: set[str] = set()
+        for key in _subject_lookup_keys(subject):
+            for c in self._claims_by_subject.get(key, []):
+                if c.event_id not in seen_ids:
+                    seen_ids.add(c.event_id)
+                    earlier_claims.append(c)
+
+        ops: list[DiffOp] = []
+        for earlier in earlier_claims:
+            if not claims_incompatible(earlier, assertion, quote):
+                continue
+            contradiction = Contradiction(
+                subject=subject.strip(),
+                earlier=ContradictionClaim(
+                    turn_key=str(earlier.turn_key),
+                    event_id=earlier.event_id,
+                    speaker_label=earlier.speaker_label,
+                    timestamp_ms=earlier.timestamp_ms,
+                    assertion=earlier.assertion,
+                    quote=earlier.quote,
+                ),
+                later=ContradictionClaim(
+                    turn_key=str(stored.turn_key),
+                    event_id=stored.event_id,
+                    speaker_label=stored.speaker_label,
+                    timestamp_ms=stored.timestamp_ms,
+                    assertion=assertion,
+                    quote=quote,
+                ),
+            )
+            self.contradictions.append(contradiction)
+            ops.append(DiffOp(op="contradiction", value=contradiction))
+            # One DiffOp per later claim is enough for the board; stop after
+            # the earliest incompatible earlier claim.
+            break
+
+        entry = StoredClaim(
+            subject=subject_key,
+            assertion=assertion,
+            quote=quote,
+            event_id=stored.event_id,
+            turn_key=stored.turn_key,
+            speaker_label=stored.speaker_label,
+            timestamp_ms=stored.timestamp_ms,
+        )
+        self._claims_by_subject.setdefault(subject_key, []).append(entry)
+        return StateDiff(ops=ops)
 
     def _on_speaker_amended(self, event: Event) -> StateDiff:
         """Live single-turn amendment. Prefer `reconcile` for the teardown batch."""
@@ -630,7 +974,7 @@ class IncidentMachine:
     # --- close / export ----------------------------------------------------
 
     def close_thread(self, thread_id: str) -> StateDiff:
-        """Explicit close. Nothing else closes a thread."""
+        """Explicit close. Answering via answers_thread_id also closes."""
         thread = self.threads.get(thread_id)
         if thread is None or thread.closed or self.frozen:
             return StateDiff()
@@ -655,6 +999,8 @@ class IncidentMachine:
             "threads": [t.to_contract() for t in self.threads.values()],
             "actions": [a.to_contract() for a in self.actions.values()],
             "latency": self.latency.to_contract(),
+            "silence": self.silence.to_contract() if self.silence else None,
+            "contradictions": [c.to_contract() for c in self.contradictions],
         }
 
 

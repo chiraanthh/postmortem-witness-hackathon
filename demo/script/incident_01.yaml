@@ -13,10 +13,14 @@
 #
 # Embedded, deliberately:
 #   - 2 explicit rule-outs, each with a spoken reason (C: DNS, C: provider)
+#   - 1 unevidenced hedge that must NOT become a status_change (C: cache)
 #   - 1 hypothesis raised then self-rejected by its own author (B: pool)
 #   - 1 mind change mid-call (B: defensive -> admits the deploy)
 #   - 1 confirmed root cause (B, explicit)
 #   - 1 dropped thread, never returned to (D: TLS cert) <- video cold open
+#   - 1 claim contradiction seed line kept as dialogue only (C: pool under
+#     pressure after B's healthy@40%). Contradiction UI is unshipped; the
+#     line must not disturb recall-relevant classifications.
 #   - 5 actions, exactly ONE unowned (A: rate limit config)
 #   - explicit resolution statement (A)
 
@@ -25,7 +29,7 @@ meta:
   language: en-IN
   sample_rate: 16000
   channels: 1
-  target_duration_ms: 269885
+  target_duration_ms: 280885
 
 speakers:
   A:
@@ -74,40 +78,49 @@ lines:
   - { speaker: D, start_ms: 82774,  text: "Ticket count is at about two hundred now. Still climbing." }
   - { speaker: B, start_ms: 88274,  text: "Pool looks healthy, actually. We're nowhere near the connection limit, utilisation is around forty percent." }
   - { speaker: B, start_ms: 95674,  text: "So I don't think it's the pool either." }
-  - { speaker: C, start_ms: 98774,  text: "And the provider status page is green. All their systems are operational. It's not upstream." }
-  - { speaker: A, start_ms: 105774, text: "Okay, so it's us. Something changed on our side." }
+  # Unevidenced hedge — tempts a status_change with no verbatim ruling-out
+  # quote. Grounding guard must refuse; placed after pool ends (97523) with
+  # 700 ms gap. Everything from the provider rule-out onward shifted +5500 ms.
+  - { speaker: C, start_ms: 98223,  text: "So it's probably not the cache, I'd say we drop that one." }
+  - { speaker: C, start_ms: 104274, text: "And the provider status page is green. All their systems are operational. It's not upstream." }
+  - { speaker: A, start_ms: 111274, text: "Okay, so it's us. Something changed on our side." }
 
   # --- Beat 4: the deploy, and B changing her mind ---
-  - { speaker: A, start_ms: 111274, text: "Did anything ship today? Any deploys?" }
-  - { speaker: B, start_ms: 115274, text: "There was a deploy, but it went out at one forty. That's forty minutes before any of this started." }
-  - { speaker: B, start_ms: 122074, text: "It passed all the tests, and we've had clean deploys on that pipeline for weeks." }
-  - { speaker: A, start_ms: 125880, overlap: true, text: "Forty minutes is not that long. What was in it?" }
-  - { speaker: B, start_ms: 130880, text: "A retry logic change on the payment worker. Backoff configuration, mostly." }
-  - { speaker: C, start_ms: 136880, text: "Hang on. If the retry logic changed, and we're seeing timeouts, those could absolutely be related." }
-  - { speaker: B, start_ms: 142565, overlap: true, text: "Hmm." }
-  - { speaker: B, start_ms: 144565, text: "Actually, yeah. If the backoff is too aggressive we'd be hammering the provider and hitting their rate limit. That would look exactly like this." }
-  - { speaker: B, start_ms: 155265, text: "It lines up. I think it's the deploy." }
-  - { speaker: A, start_ms: 159565, text: "Okay, that's our leading theory." }
+  - { speaker: A, start_ms: 116774, text: "Did anything ship today? Any deploys?" }
+  - { speaker: B, start_ms: 120774, text: "There was a deploy, but it went out at one forty. That's forty minutes before any of this started." }
+  - { speaker: B, start_ms: 127574, text: "It passed all the tests, and we've had clean deploys on that pipeline for weeks." }
+  - { speaker: A, start_ms: 131380, overlap: true, text: "Forty minutes is not that long. What was in it?" }
+  - { speaker: B, start_ms: 136380, text: "A retry logic change on the payment worker. Backoff configuration, mostly." }
+  - { speaker: C, start_ms: 142380, text: "Hang on. If the retry logic changed, and we're seeing timeouts, those could absolutely be related." }
+  - { speaker: B, start_ms: 148065, overlap: true, text: "Hmm." }
+  - { speaker: B, start_ms: 150065, text: "Actually, yeah. If the backoff is too aggressive we'd be hammering the provider and hitting their rate limit. That would look exactly like this." }
+  - { speaker: B, start_ms: 160765, text: "It lines up. I think it's the deploy." }
+  - { speaker: A, start_ms: 165065, text: "Okay, that's our leading theory." }
+  # Contradiction seed — Priya re-asserts pool pressure after Disha's
+  # healthy @40% claim (88274). Placed after leading theory; TLS and
+  # everything after shifted +5500 ms so the new line does not collide
+  # with the unevidenced cache hedge or any unflagged neighbour.
+  - { speaker: C, start_ms: 167800, text: "Hold on though — looking at the timeouts again, the pool has to be under pressure if we're seeing connection failures like this." }
 
   # --- Beat 5: the dropped thread. Nobody answers D. Never revisited. ---
-  - { speaker: D, start_ms: 164065, text: "Also, unrelated, but the TLS certificate on the gateway expires in two days. Should someone be looking at that?" }
-  - { speaker: A, start_ms: 173565, text: "Disha, how fast can you roll back?" }
-  - { speaker: B, start_ms: 178065, text: "Five minutes, maybe. The previous build is still in the registry." }
+  - { speaker: D, start_ms: 175065, text: "Also, unrelated, but the TLS certificate on the gateway expires in two days. Should someone be looking at that?" }
+  - { speaker: A, start_ms: 184565, text: "Disha, how fast can you roll back?" }
+  - { speaker: B, start_ms: 189065, text: "Five minutes, maybe. The previous build is still in the registry." }
 
   # --- Beat 6: actions. One is unowned. ---
-  - { speaker: B, start_ms: 184565, text: "I'll roll back the deploy now." }
-  - { speaker: C, start_ms: 188565, text: "I'll watch the error rate and tell you when it drops." }
-  - { speaker: A, start_ms: 193565, text: "Someone needs to check the rate limit configuration on the provider side as well. We should know what our actual ceiling is." }
-  - { speaker: A, start_ms: 203565, text: "Rohan, can you draft a status update for customers?" }
-  - { speaker: D, start_ms: 208565, text: "Yeah, I'll get something out in the next ten minutes." }
+  - { speaker: B, start_ms: 195565, text: "I'll roll back the deploy now." }
+  - { speaker: C, start_ms: 199565, text: "I'll watch the error rate and tell you when it drops." }
+  - { speaker: A, start_ms: 204565, text: "Someone needs to check the rate limit configuration on the provider side as well. We should know what our actual ceiling is." }
+  - { speaker: A, start_ms: 214565, text: "Rohan, can you draft a status update for customers?" }
+  - { speaker: D, start_ms: 219565, text: "Yeah, I'll get something out in the next ten minutes." }
 
   # --- Beat 7: confirm and resolve ---
-  - { speaker: C, start_ms: 215065, text: "Rollback is going out. I can see the new pods coming up." }
-  - { speaker: C, start_ms: 223065, text: "Error rate is dropping. We're down to about twelve percent." }
-  - { speaker: D, start_ms: 229565, text: "Ticket rate has slowed too. Nothing new in the last two minutes." }
-  - { speaker: C, start_ms: 236065, text: "Error rate is basically back to baseline now. We're under one percent." }
-  - { speaker: B, start_ms: 243565, text: "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry change properly and put a test around it." }
-  - { speaker: A, start_ms: 252565, text: "Good. Anyone object to calling this resolved?" }
-  - { speaker: C, start_ms: 257565, text: "No, looks clean from here." }
-  - { speaker: D, start_ms: 259388, overlap: true, text: "Support side is quiet." }
-  - { speaker: A, start_ms: 262888, text: "Okay. Declaring this resolved at three fifteen. Thanks, everyone. We'll do a proper postmortem tomorrow." }
+  - { speaker: C, start_ms: 226065, text: "Rollback is going out. I can see the new pods coming up." }
+  - { speaker: C, start_ms: 234065, text: "Error rate is dropping. We're down to about twelve percent." }
+  - { speaker: D, start_ms: 240565, text: "Ticket rate has slowed too. Nothing new in the last two minutes." }
+  - { speaker: C, start_ms: 247065, text: "Error rate is basically back to baseline now. We're under one percent." }
+  - { speaker: B, start_ms: 254565, text: "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry change properly and put a test around it." }
+  - { speaker: A, start_ms: 263565, text: "Good. Anyone object to calling this resolved?" }
+  - { speaker: C, start_ms: 268565, text: "No, looks clean from here." }
+  - { speaker: D, start_ms: 270388, overlap: true, text: "Support side is quiet." }
+  - { speaker: A, start_ms: 273888, text: "Okay. Declaring this resolved at three fifteen. Thanks, everyone. We'll do a proper postmortem tomorrow." }

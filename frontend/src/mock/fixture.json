@@ -1,6 +1,6 @@
 {
+  "note": "HAND-AUTHORED scaffold mock for VITE_MOCK=true frontend-dev only. Not used by the portal. Portal replay uses frontend/src/replay/incident_01.fixture.json (live pipeline capture).",
   "incident_id": "INC-2026-0915-PAYMENTS",
-  "note": "Mock incident replay. Each item wraps a schema-valid Event (shared/schema.json v1.1.0) with emit_at_ms for wall-clock scheduling only. speaker_name stays null throughout, per contract.",
   "messages": [
     {
       "emit_at_ms": 600,

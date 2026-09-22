@@ -59,6 +59,11 @@ export function HypothesisCard({
             raised by
           </span>
           <SpeakerBadge label={h.raised_by_label} name={null} size="sm" />
+          {h.implicit && (
+            <span className="text-[9px] font-bold uppercase tracking-wide text-inkFaint">
+              implicit
+            </span>
+          )}
           {justCorrected && (
             <span className="animate-blink text-[9px] font-bold uppercase tracking-wide text-accentSoft">
               reattributed

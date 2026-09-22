@@ -8,6 +8,8 @@ anthropic==1.4.0
 python-dotenv==1.2.3
 pydantic==2.13.5
 websockets==17.1
+fastapi==0.141.1
+uvicorn==0.53.0
 
 # Note: anthropic 1.x is built on httpx2, not httpx. It arrives as a
 # transitive dependency; anything constructing a transport or an SDK

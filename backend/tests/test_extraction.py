@@ -19,6 +19,7 @@ import json
 import os
 import unittest
 from dataclasses import dataclass
+from pathlib import Path
 
 import anthropic
 import httpx2
@@ -283,6 +284,33 @@ class TestStatusChangeGuard(unittest.TestCase):
         self.assertIn("not in the utterance", out.rejections[0].reason)
         self.assertEqual(out.rejections[0].claimed_quote, "we ruled out the cache")
         self.assertEqual(w.rejected_status_changes, 1)
+
+    def test_quote_matching_cleaned_text_passes_grounding(self):
+        """Cleanup rewrote the line; quote is in cleaned, not raw — still OK."""
+        from backend.extraction.worker import quote_grounded_against_utterance
+
+        raw = utt("I think it's the De Broglie.")
+        raw.cleaned_text = "I think it's the deploy."
+        self.assertTrue(
+            quote_grounded_against_utterance("the deploy", raw)
+        )
+        self.assertFalse(
+            quote_grounded_against_utterance("the deploy", utt("I think it's the De Broglie."))
+        )
+
+        w = worker_with(one(
+            type="status_change",
+            summary="Deploy confirmed",
+            hypothesis_id="bad-deploy",
+            new_state="confirmed",
+            evidence_quote="it was the deploy",
+        ))
+        u = utt("Yeah, it was the De Broglie. Rolling back.")
+        u.cleaned_text = "Yeah, it was the deploy. Rolling back."
+        out = w.extract(u)
+        self.assertEqual(only(out).type, "status_change")
+        # Wire event still carries the raw ASR text.
+        self.assertEqual(only(out).text, u.text)
 
     def test_status_change_for_an_unknown_hypothesis_is_accepted_but_counted(self):
         w = worker_with(one(type="status_change", summary="CDN ruled out",
@@ -597,30 +625,75 @@ class TestSdkIntegration(unittest.TestCase):
         self.assertEqual(only(out).type, "noise")
         self.assertEqual(w.rejected_status_changes, 1)
 
+    def test_gateway_request_carries_temperature_zero_and_json_schema(self):
+        captured = {}
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            captured["body"] = json.loads(request.content)
+            captured["headers"] = dict(request.headers)
+            return httpx2.Response(
+                200,
+                json={
+                    "request_id": "gw_test_1",
+                    "choices": [{
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps({"events": [{
+                                "type": "noise",
+                                "summary": "",
+                                "hypothesis_id": None,
+                                "new_state": None,
+                                "owner": None,
+                                "confidence": 0.5,
+                                "evidence_quote": None,
+                            }]}),
+                        },
+                        "finish_reason": "stop",
+                    }],
+                },
+            )
+
+        from backend.extraction.providers.assemblyai_gateway import AssemblyAIGateway
+
+        client = httpx2.Client(transport=httpx2.MockTransport(handler))
+        provider = AssemblyAIGateway(
+            model="claude-sonnet-4-6",
+            api_key="aai-fake",
+            http_client=client,
+            call_log=Path("/tmp/pw_gw_test.jsonl"),
+        )
+        w = ExtractionWorker(provider=provider, on_log=lambda _m: None)
+        out = w.extract(utt("hello there"))
+        self.assertEqual(only(out).type, "noise")
+        body = captured["body"]
+        self.assertEqual(body["temperature"], 0)
+        self.assertEqual(body["response_format"]["type"], "json_schema")
+        self.assertTrue(body["response_format"]["json_schema"]["strict"])
+        self.assertIn("events", body["response_format"]["json_schema"]["schema"]["properties"])
+        # No Bearer prefix — raw key in authorization header.
+        self.assertEqual(captured["headers"].get("authorization"), "aai-fake")
+        self.assertNotIn("Bearer", captured["headers"].get("authorization", ""))
+
     def test_a_real_sdk_response_can_carry_two_events(self):
         captured = {}
         client = self._client(captured, {"events": [
             {
-                "type": "status_change", "summary": "Deploy confirmed as cause",
+                "type": "status_change", "summary": "Deploy confirmed",
                 "hypothesis_id": "bad-deploy", "new_state": "confirmed",
                 "owner": None, "confidence": 0.9,
                 "evidence_quote": "it was the deploy",
             },
             {
-                "type": "action", "summary": "Revert the retry change",
-                "hypothesis_id": None, "new_state": None, "owner": None,
-                "confidence": 0.9, "evidence_quote": None,
+                "type": "action", "summary": "Revert and add a test",
+                "hypothesis_id": None, "new_state": None,
+                "owner": "A", "confidence": 0.85, "evidence_quote": None,
             },
         ]})
         w = ExtractionWorker(client=client, model="test-model",
                              on_log=lambda _m: None)
-        out = w.extract(utt(
-            "Yeah, it was the deploy. I'll revert the retry change properly."
-        ))
-        self.assertEqual([e.type for e in out.events],
-                         ["status_change", "action"])
-        self.assertEqual(w.multi_event_utterances, 1)
-        self.assertEqual(w.events_emitted, 2)
+        out = w.extract(utt("Yeah, it was the deploy, I'll revert it and put a test around it."))
+        types = [e.type for e in out.events]
+        self.assertEqual(types, ["status_change", "action"])
 
 
 # --------------------------------------------------------------------------

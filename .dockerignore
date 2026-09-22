@@ -1,0 +1,12 @@
+venv/
+.venv/
+node_modules/
+frontend/node_modules/
+demo/runs/
+demo/audio/.tts_cache/
+demo/audio/ES2002a.Mix-Headset.wav
+.git/
+**/__pycache__/
+*.pyc
+.env
+frontend/dist/

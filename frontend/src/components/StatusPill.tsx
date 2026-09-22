@@ -13,6 +13,11 @@ const STYLE: Record<IncidentStats["status"], { dot: string; text: string; ring: 
     text: "text-accentSoft",
     ring: "border-accent/50",
   },
+  RESOLVED: {
+    dot: "bg-teal-400",
+    text: "text-teal-300",
+    ring: "border-teal-400/40",
+  },
 };
 
 export function StatusPill({ status }: { status: IncidentStats["status"] }) {

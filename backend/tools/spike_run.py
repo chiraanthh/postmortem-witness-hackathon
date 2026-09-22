@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     duration_ms = audio.probe_duration_ms(args.file)
 
     stream_config = StreamConfig(max_speakers=args.max_speakers)
+    print(f"keyterms: {len(stream_config.keyterms)} from demo/script/keyterms.txt")
 
     t0 = now_ms()
 
@@ -229,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         "turn_event_shapes": shapes,
         "revision_messages": len(revision_messages),
         "revision_items_per_message": revision_messages,
+        "keyterms": stream_config.keyterms,
     }
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
     rec.close()

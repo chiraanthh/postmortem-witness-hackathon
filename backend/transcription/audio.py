@@ -14,6 +14,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import wave
 from collections.abc import Iterator
@@ -210,6 +211,104 @@ def file_source(path: Path, *, realtime: bool = True) -> Iterator[Chunk]:
     if not path.exists():
         raise AudioError(f"No such audio file: {path}")
     return _paced(_chunked(_raw_pcm_from_file(path)), realtime)
+
+
+class ControllableFileSource:
+    """File replay with pause/resume, start offset, and a live position.
+
+    Pause blocks the feeder without closing the ASR socket — extraction and
+    WebSocket clients keep running. `stop()` unblocks and ends iteration so
+    the pipeline thread can exit cleanly on seek/restart.
+    """
+
+    def __init__(
+        self,
+        path: Path,
+        *,
+        start_ms: int = 0,
+        realtime: bool = True,
+    ) -> None:
+        if not path.exists():
+            raise AudioError(f"No such audio file: {path}")
+        self.path = path
+        self.start_ms = max(0, int(start_ms))
+        self.realtime = realtime
+        self.position_ms = self.start_ms
+        self._gate = threading.Event()
+        self._gate.set()
+        self._stop = threading.Event()
+        # Set from another thread (e.g. ASR reconnect) so the next chunk is
+        # due "now" instead of catching up wall time lost during a stall.
+        self._reset_pacing = threading.Event()
+
+    def pause(self) -> None:
+        self._gate.clear()
+
+    def resume(self) -> None:
+        self._gate.set()
+
+    @property
+    def paused(self) -> bool:
+        return not self._gate.is_set() and not self._stop.is_set()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._gate.set()
+
+    def reset_pacing(self) -> None:
+        """Restart the realtime wall clock from the current audio position.
+
+        Safe to call from another thread. Without this, a stalled pump that
+        later reconnects would release minutes of catch-up audio in a burst
+        and flood the new WebSocket.
+        """
+        self._reset_pacing.set()
+
+    def _reanchor_wall0(self, chunk: Chunk) -> float:
+        """Wall clock such that `chunk` is due immediately."""
+        return time.monotonic() - ((chunk.end_ms - self.start_ms) / 1000.0)
+
+    def __iter__(self) -> Iterator[Chunk]:
+        wall0 = time.monotonic()
+        for chunk in _chunked(_raw_pcm_from_file(self.path)):
+            if self._stop.is_set():
+                return
+            if chunk.end_ms <= self.start_ms:
+                continue
+            while not self._gate.wait(0.05):
+                if self._stop.is_set():
+                    return
+            if self._stop.is_set():
+                return
+            if self._reset_pacing.is_set():
+                self._reset_pacing.clear()
+                wall0 = self._reanchor_wall0(chunk)
+            if self.realtime:
+                due = wall0 + (chunk.end_ms - self.start_ms) / 1000.0
+                drift = due - time.monotonic()
+                if drift > 0:
+                    # Sleep in slices so pause/stop/reset_pacing can interrupt.
+                    end = time.monotonic() + drift
+                    while time.monotonic() < end:
+                        if self._stop.is_set():
+                            return
+                        if self._reset_pacing.is_set():
+                            self._reset_pacing.clear()
+                            wall0 = self._reanchor_wall0(chunk)
+                            break
+                        if not self._gate.wait(0.05):
+                            # Paused mid-wait: freeze pacing until resume.
+                            while not self._gate.wait(0.05):
+                                if self._stop.is_set():
+                                    return
+                            # After resume, don't try to catch up the pause.
+                            wall0 = self._reanchor_wall0(chunk)
+                            break
+                        remaining = end - time.monotonic()
+                        if remaining > 0:
+                            time.sleep(min(0.05, remaining))
+            self.position_ms = chunk.end_ms
+            yield chunk
 
 
 def mic_source(device: str = ":0") -> Iterator[Chunk]:

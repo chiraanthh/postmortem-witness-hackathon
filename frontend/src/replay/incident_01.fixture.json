@@ -1,0 +1,6118 @@
+{
+  "incident_id": "incident_01",
+  "source": "live IncidentHub capture of demo/audio/incident_01.wav",
+  "contract_version": "1.5.0",
+  "extraction_model": "claude-haiku-4-5-20251001",
+  "extraction_provider": "anthropic",
+  "extraction_temperature": 0.0,
+  "audio_file": "demo/audio/incident_01.wav",
+  "captured_unix_ms": 1790071584627,
+  "frame_count": 307,
+  "duration_ms": 288327,
+  "type_counts": {
+    "handshake": 1,
+    "snapshot": 1,
+    "diff": 305
+  },
+  "op_counts": {
+    "set_latency": 289,
+    "upsert_action": 8,
+    "upsert_event": 22,
+    "upsert_hypothesis": 7,
+    "upsert_thread": 6,
+    "silence_summary": 1,
+    "set_resolved": 1,
+    "reconciliation": 1
+  },
+  "messages": [
+    {
+      "emit_at_ms": 0,
+      "message": {
+        "type": "handshake",
+        "contract_version": "1.5.0"
+      }
+    },
+    {
+      "emit_at_ms": 0,
+      "message": {
+        "type": "snapshot",
+        "state": {
+          "incident_id": "incident",
+          "started_at_ms": 0,
+          "resolved": false,
+          "timeline": [],
+          "hypotheses": [],
+          "threads": [],
+          "actions": [],
+          "latency": {
+            "asr_ms": 0.0,
+            "extract_ms": 0.0,
+            "e2e_ms": 0.0
+          },
+          "silence": null,
+          "contradictions": []
+        },
+        "provenance": {},
+        "refusals": []
+      }
+    },
+    {
+      "emit_at_ms": 1001,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 2002,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 3003,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 4004,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 5005,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 6006,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 7008,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 0.0,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 8009,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 9010,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 0.0,
+              "e2e_ms": 0.0
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 10011,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 11012,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 12014,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 13014,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 14015,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 15016,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 16018,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 17019,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 18020,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 19021,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 20023,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 21024,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 22025,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1102.7210829984397,
+              "e2e_ms": 2801.8302920013666
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 23026,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 24027,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 25028,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 26029,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 27030,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 28032,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 29033,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 30034,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 31036,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1886.1605830006301,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 32037,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 33038,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 34039,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 35040,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 36042,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 37043,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 38044,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 39045,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 40046,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 41048,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 42048,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 42884,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "4f87757c-7884-4605-a261-0062f071b63b",
+              "text": "Assigned infra investigation to Priya",
+              "owner": "Priya",
+              "at_ms": 30024,
+              "unowned": false
+            },
+            "key": "4f87757c-7884-4605-a261-0062f071b63b"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "4f87757c-7884-4605-a261-0062f071b63b",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 5,
+              "speaker_label": "A",
+              "speaker_name": null,
+              "timestamp_ms": 30024,
+              "text": "Right. Priya, can you take infra? Rohan, keep tracking customer impact. Yeah, on it. Will do.",
+              "summary": "Assigned infra investigation to Priya",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "Priya",
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "4f87757c-7884-4605-a261-0062f071b63b"
+          },
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "71de3968-1297-4b64-8634-7d500a583be4",
+              "text": "Assigned customer impact tracking to Rohan",
+              "owner": "Rohan",
+              "at_ms": 30024,
+              "unowned": false
+            },
+            "key": "71de3968-1297-4b64-8634-7d500a583be4"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "71de3968-1297-4b64-8634-7d500a583be4",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 5,
+              "speaker_label": "A",
+              "speaker_name": null,
+              "timestamp_ms": 30024,
+              "text": "Right. Priya, can you take infra? Rohan, keep tracking customer impact. Yeah, on it. Will do.",
+              "summary": "Assigned customer impact tracking to Rohan",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "Rohan",
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "71de3968-1297-4b64-8634-7d500a583be4"
+          }
+        ],
+        "provenance": {
+          "4f87757c-7884-4605-a261-0062f071b63b": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHUUeDGVWuDMCVdiP3D"
+          },
+          "71de3968-1297-4b64-8634-7d500a583be4": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHUUeDGVWuDMCVdiP3D"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 43050,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 44051,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 45052,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 46053,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 47055,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 48056,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 49057,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 50058,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 51060,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 52060,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 53062,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 54063,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 54324,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "dns-or-pool",
+              "text": "DNS resolver issue or connection pool exhaustion",
+              "state": "open",
+              "raised_by_label": "C",
+              "raised_at_ms": 38425,
+              "resolved_at_ms": null,
+              "implicit": false
+            },
+            "key": "dns-or-pool"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc",
+              "type": "hypothesis",
+              "connection_epoch": 0,
+              "turn_order": 6,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 38425,
+              "text": "First thing I check is DNS. We had a resolver issue last month that looked a lot like this. Could be the connection pool. If we're exhausting database connections, we'd",
+              "summary": "DNS resolver issue or connection pool exhaustion",
+              "hypothesis_id": "dns-or-pool",
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.7,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc"
+          }
+        ],
+        "provenance": {
+          "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHVGs4oUmPzKBN12TKb"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 55064,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 56065,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 57066,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 58067,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 59069,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 60070,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 61071,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 62072,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 62533,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "dd65f268-811e-41f1-963a-123092939817",
+              "text": "Check payment provider status page",
+              "owner": null,
+              "opened_at_ms": 50373,
+              "closed": false,
+              "asked_at_ms": 50373,
+              "addressee": null,
+              "answered": false,
+              "answered_at_ms": null,
+              "unanswered_age_ms": null
+            },
+            "key": "dd65f268-811e-41f1-963a-123092939817"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "dd65f268-811e-41f1-963a-123092939817",
+              "type": "thread",
+              "connection_epoch": 0,
+              "turn_order": 8,
+              "speaker_label": "B",
+              "speaker_name": null,
+              "timestamp_ms": 50373,
+              "text": "Should we check the payment provider status page? If it's upstream, there's nothing we can do anyway.",
+              "summary": "Check payment provider status page",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.5,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "dd65f268-811e-41f1-963a-123092939817"
+          }
+        ],
+        "provenance": {
+          "dd65f268-811e-41f1-963a-123092939817": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHVooQnE3K65FLQz3XX"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 63073,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 64074,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 65075,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 66078,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 67079,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 68080,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 69081,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 70083,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 71084,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 72085,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1856.8703749980778,
+              "e2e_ms": 3461.461458001286
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 73086,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 74088,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 75089,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 76090,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 77091,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 78093,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 79094,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 80095,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 81096,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 82098,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 83099,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 84099,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 85100,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 86102,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 87103,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3425.039292000234
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 87667,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "dns-or-pool",
+              "text": "DNS resolver issue or connection pool exhaustion",
+              "state": "ruled_out",
+              "raised_by_label": "C",
+              "raised_at_ms": 38425,
+              "resolved_at_ms": 72329,
+              "implicit": false
+            },
+            "key": "dns-or-pool"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "7919337b-9b54-4bf4-89d8-7742daaf1353",
+              "type": "status_change",
+              "connection_epoch": 0,
+              "turn_order": 11,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 72329,
+              "text": "DNS is fine. I checked the resolver. Queries are resolving normally. Latency is flat. It's not that. Good, that's one down.",
+              "summary": "Ruled out DNS",
+              "hypothesis_id": "dns-or-pool",
+              "new_state": "ruled_out",
+              "owner": null,
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "7919337b-9b54-4bf4-89d8-7742daaf1353"
+          }
+        ],
+        "provenance": {
+          "7919337b-9b54-4bf4-89d8-7742daaf1353": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHXmPN3RQWNHrFqXkjq"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 88104,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 89105,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 90106,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1495.9353750012815,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 91107,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 92108,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 93109,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 94110,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 95111,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 96112,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 97113,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 98115,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 99116,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1574.6468330007046,
+              "e2e_ms": 3390.7469170000404
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 100117,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 101118,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 102118,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 103119,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 104120,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 105122,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 106123,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 107124,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 108125,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 109126,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 110128,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 111128,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 112129,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 113131,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 114132,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 115133,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 116134,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 116892,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "upstream-provider",
+              "text": "Ruled out upstream provider issue",
+              "state": "ruled_out",
+              "raised_by_label": "C",
+              "raised_at_ms": 104326,
+              "resolved_at_ms": 104326,
+              "implicit": true
+            },
+            "key": "upstream-provider"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "b3a9807b-efe9-4873-bf45-7a2a089eab00",
+              "type": "status_change",
+              "connection_epoch": 0,
+              "turn_order": 16,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 104326,
+              "text": "And the provider status page is green. All their systems are operational. It's not upstream.",
+              "summary": "Ruled out upstream provider issue",
+              "hypothesis_id": "upstream-provider",
+              "new_state": "ruled_out",
+              "owner": null,
+              "confidence": 0.5,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": "dd65f268-811e-41f1-963a-123092939817",
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "b3a9807b-efe9-4873-bf45-7a2a089eab00"
+          },
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "dd65f268-811e-41f1-963a-123092939817",
+              "text": "Check payment provider status page",
+              "owner": null,
+              "opened_at_ms": 50373,
+              "closed": true,
+              "asked_at_ms": 50373,
+              "addressee": null,
+              "answered": true,
+              "answered_at_ms": 104326,
+              "unanswered_age_ms": null
+            },
+            "key": "dd65f268-811e-41f1-963a-123092939817"
+          }
+        ],
+        "provenance": {
+          "b3a9807b-efe9-4873-bf45-7a2a089eab00": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHZtvbqiBaggeVNPPvd"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 117135,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 118136,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 119136,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 120138,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1500.8674170002341,
+              "e2e_ms": 3257.100124999881
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 121139,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 122140,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 123140,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 124142,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 125142,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 126143,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 127143,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 128144,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 129145,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 130147,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 131148,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 132149,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 133150,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 134151,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 135153,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 136154,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 137155,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 138157,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1514.9024170003831,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 139158,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 140158,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1157.4092919994146,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 141159,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 142161,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 143162,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 144163,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 145164,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 146166,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 147114,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "retry-logic-backoff",
+              "text": "Retry logic change on payment worker backoff",
+              "state": "open",
+              "raised_by_label": "C",
+              "raised_at_ms": 136423,
+              "resolved_at_ms": null,
+              "implicit": false
+            },
+            "key": "retry-logic-backoff"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "d23739ab-b4f6-442f-8d42-8abb6a276f63",
+              "type": "hypothesis",
+              "connection_epoch": 0,
+              "turn_order": 21,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 136423,
+              "text": "A retry logic change on the payment worker, backoff configuration mostly.",
+              "summary": "Retry logic change on payment worker backoff",
+              "hypothesis_id": "retry-logic-backoff",
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.7,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "d23739ab-b4f6-442f-8d42-8abb6a276f63"
+          }
+        ],
+        "provenance": {
+          "d23739ab-b4f6-442f-8d42-8abb6a276f63": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHcAak8XsRGcY8Vebwy"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 147166,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 148167,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 149167,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 150169,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 151170,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 152171,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 153172,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1550.127459000796,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 154174,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 155175,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 156176,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 157177,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 158178,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 159179,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 160181,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 161182,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 162183,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 163184,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 164185,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 165187,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 166187,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 167188,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 168190,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 169191,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 169448,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "bad-deploy",
+              "text": "Proposes the deploy as the cause",
+              "state": "open",
+              "raised_by_label": "C",
+              "raised_at_ms": 160847,
+              "resolved_at_ms": null,
+              "implicit": false
+            },
+            "key": "bad-deploy"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "8aa7aedf-fbc9-44d2-878d-2df51b42a8a4",
+              "type": "hypothesis",
+              "connection_epoch": 0,
+              "turn_order": 24,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 160847,
+              "text": "It lines up. I think it's the deploy.",
+              "summary": "Proposes the deploy as the cause",
+              "hypothesis_id": "bad-deploy",
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.7,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "8aa7aedf-fbc9-44d2-878d-2df51b42a8a4"
+          }
+        ],
+        "provenance": {
+          "8aa7aedf-fbc9-44d2-878d-2df51b42a8a4": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHdpHAKtEb3xJ62Nqxk"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 170191,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 171192,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 172193,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 3175.5645829997957
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 173194,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 174195,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 175196,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 176197,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 177198,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 178199,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 179200,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 180201,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 181203,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 182204,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 183205,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 184206,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 185207,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 186208,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 187209,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 187796,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "ac49a8fa-fdcb-4313-aa67-89448ed628a1",
+              "text": "TLS certificate on gateway expires in 2 days",
+              "owner": null,
+              "opened_at_ms": 175106,
+              "closed": false,
+              "asked_at_ms": 175106,
+              "addressee": null,
+              "answered": false,
+              "answered_at_ms": null,
+              "unanswered_age_ms": null
+            },
+            "key": "ac49a8fa-fdcb-4313-aa67-89448ed628a1"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "ac49a8fa-fdcb-4313-aa67-89448ed628a1",
+              "type": "thread",
+              "connection_epoch": 0,
+              "turn_order": 27,
+              "speaker_label": "B",
+              "speaker_name": null,
+              "timestamp_ms": 175106,
+              "text": "Also unrelated, but the TLS certificate on the gateway expires in 2 days. Should someone be looking at that?",
+              "summary": "TLS certificate on gateway expires in 2 days",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.5,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "ac49a8fa-fdcb-4313-aa67-89448ed628a1"
+          }
+        ],
+        "provenance": {
+          "ac49a8fa-fdcb-4313-aa67-89448ed628a1": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHfAoUFVCxDscjxpksz"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 188210,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 189211,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 190213,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 191214,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 192214,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 193215,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 194217,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 195218,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 196219,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 197220,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2996.8256250005215
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 198222,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1187.0157079994678,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 199223,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1187.0157079994678,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 200224,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1187.0157079994678,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 201225,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1187.0157079994678,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 202226,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1187.0157079994678,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 202913,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "c249ac46-4f45-4cb5-b2c2-d76637e1cd3f",
+              "text": "Rolling back the deploy",
+              "owner": "C",
+              "at_ms": 195675,
+              "unowned": false
+            },
+            "key": "c249ac46-4f45-4cb5-b2c2-d76637e1cd3f"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "c249ac46-4f45-4cb5-b2c2-d76637e1cd3f",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 30,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 195675,
+              "text": "I'll roll back the deploy now.",
+              "summary": "Rolling back the deploy",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "C",
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "c249ac46-4f45-4cb5-b2c2-d76637e1cd3f"
+          }
+        ],
+        "provenance": {
+          "c249ac46-4f45-4cb5-b2c2-d76637e1cd3f": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHgHvNNnr9impM6JfP2"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 203228,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 204229,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 205230,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 206232,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 207233,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 208234,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 208252,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+              "text": "Watch error rate and report when it drops",
+              "owner": "C",
+              "at_ms": 199663,
+              "unowned": false
+            },
+            "key": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 31,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 199663,
+              "text": "I'll watch the error rate and tell you when it drops.",
+              "summary": "Watch error rate and report when it drops",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "C",
+              "confidence": 0.9,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e"
+          }
+        ],
+        "provenance": {
+          "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHggdsYr7ELEhkCPM2c"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 209235,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 210236,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 211237,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 212238,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 213240,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 214240,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 215241,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 216242,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 217243,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 217465,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6",
+              "text": "Check provider rate limit configuration and ceiling",
+              "owner": null,
+              "opened_at_ms": 204522,
+              "closed": false,
+              "asked_at_ms": 204522,
+              "addressee": null,
+              "answered": false,
+              "answered_at_ms": null,
+              "unanswered_age_ms": null
+            },
+            "key": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6",
+              "type": "thread",
+              "connection_epoch": 0,
+              "turn_order": 32,
+              "speaker_label": "A",
+              "speaker_name": null,
+              "timestamp_ms": 204522,
+              "text": "Someone needs to check the rate limit configuration on the provider side as well. We should know what our actual ceiling is.",
+              "summary": "Check provider rate limit configuration and ceiling",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.85,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6"
+          }
+        ],
+        "provenance": {
+          "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHhNDrohSFKyEa9zNBH"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 218244,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 219245,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 220247,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 221248,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 222249,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1589.0490840002894,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 223251,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.151582999155,
+              "e2e_ms": 2980.0373329985887
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 223808,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "36ea1406-bd22-4fc4-88d0-d0d471227cd1",
+              "text": "Draft customer status update",
+              "owner": "Rohan",
+              "at_ms": 213632,
+              "unowned": false
+            },
+            "key": "36ea1406-bd22-4fc4-88d0-d0d471227cd1"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "36ea1406-bd22-4fc4-88d0-d0d471227cd1",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 33,
+              "speaker_label": "A",
+              "speaker_name": null,
+              "timestamp_ms": 213632,
+              "text": "Rohan, can you draft a status update for customers?",
+              "summary": "Draft customer status update",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "Rohan",
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "36ea1406-bd22-4fc4-88d0-d0d471227cd1"
+          }
+        ],
+        "provenance": {
+          "36ea1406-bd22-4fc4-88d0-d0d471227cd1": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHhqJHPt5y8fdFYT6Te"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 224252,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 225253,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 226254,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 227255,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 228257,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 229258,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 230259,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 231260,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 232262,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 233262,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 234263,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 234992,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1",
+              "text": "Rollback going out, new pods coming up",
+              "owner": null,
+              "at_ms": 226169,
+              "unowned": true
+            },
+            "key": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 35,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 226169,
+              "text": "Rollback is going out. I can see the new pods coming up.",
+              "summary": "Rollback going out, new pods coming up",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1"
+          }
+        ],
+        "provenance": {
+          "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHif98e8GzXnS1EAMHw"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 235264,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 236265,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 237266,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 238267,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 239268,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 240270,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 241271,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 242272,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 243274,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 244274,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 245276,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 246277,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 247277,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 248278,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 249280,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 250281,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 251282,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 252283,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 253285,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 254286,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 255287,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 256289,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 257290,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 258291,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 259292,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 260294,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 261295,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 262297,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 263298,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 264299,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 265300,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 266301,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 267237,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "bad-deploy",
+              "text": "Proposes the deploy as the cause",
+              "state": "confirmed",
+              "raised_by_label": "C",
+              "raised_at_ms": 160847,
+              "resolved_at_ms": 254662,
+              "implicit": false
+            },
+            "key": "bad-deploy"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "450a00d5-b5a1-46c8-aa3f-4f69dcaadb3a",
+              "type": "status_change",
+              "connection_epoch": 0,
+              "turn_order": 39,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 254662,
+              "text": "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry change properly and put a test around it.",
+              "summary": "Confirmed bad deploy as cause",
+              "hypothesis_id": "bad-deploy",
+              "new_state": "confirmed",
+              "owner": null,
+              "confidence": 0.5,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "450a00d5-b5a1-46c8-aa3f-4f69dcaadb3a"
+          },
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "6dd33876-6c1f-46f4-9f7a-ae0a11eeaa94",
+              "text": "Revert retry change and add test",
+              "owner": "C",
+              "at_ms": 254662,
+              "unowned": false
+            },
+            "key": "6dd33876-6c1f-46f4-9f7a-ae0a11eeaa94"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "6dd33876-6c1f-46f4-9f7a-ae0a11eeaa94",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 39,
+              "speaker_label": "C",
+              "speaker_name": null,
+              "timestamp_ms": 254662,
+              "text": "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry change properly and put a test around it.",
+              "summary": "Revert retry change and add test",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "C",
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "6dd33876-6c1f-46f4-9f7a-ae0a11eeaa94"
+          }
+        ],
+        "provenance": {
+          "450a00d5-b5a1-46c8-aa3f-4f69dcaadb3a": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHkzL6cCYXsZqWoSfN1"
+          },
+          "6dd33876-6c1f-46f4-9f7a-ae0a11eeaa94": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHkzL6cCYXsZqWoSfN1"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 267303,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 268304,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 269305,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 270307,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 271308,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 272309,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 273310,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 274312,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 275313,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 276314,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 277315,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 278317,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 279318,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 280319,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 281320,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 282322,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 283323,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 284323,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 285323,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1565.567458000034,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 286325,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 287326,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1227.7455000001937,
+              "e2e_ms": 2913.9625419992954
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 287955,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "ac49a8fa-fdcb-4313-aa67-89448ed628a1",
+              "text": "TLS certificate on gateway expires in 2 days",
+              "owner": null,
+              "opened_at_ms": 175106,
+              "closed": false,
+              "asked_at_ms": 175106,
+              "addressee": null,
+              "answered": false,
+              "answered_at_ms": null,
+              "unanswered_age_ms": 98885
+            },
+            "key": "ac49a8fa-fdcb-4313-aa67-89448ed628a1"
+          },
+          {
+            "op": "upsert_thread",
+            "value": {
+              "thread_id": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6",
+              "text": "Check provider rate limit configuration and ceiling",
+              "owner": null,
+              "opened_at_ms": 204522,
+              "closed": false,
+              "asked_at_ms": 204522,
+              "addressee": null,
+              "answered": false,
+              "answered_at_ms": null,
+              "unanswered_age_ms": 69469
+            },
+            "key": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6"
+          },
+          {
+            "op": "silence_summary",
+            "value": {
+              "questions_asked": 3,
+              "questions_unanswered": 2,
+              "longest_unanswered_ms": 98885,
+              "unanswered_addressees": [],
+              "open_threads": [
+                {
+                  "thread_id": "ac49a8fa-fdcb-4313-aa67-89448ed628a1",
+                  "text": "TLS certificate on gateway expires in 2 days",
+                  "asked_at_ms": 175106,
+                  "addressee": null,
+                  "unanswered_age_ms": 98885
+                },
+                {
+                  "thread_id": "ac5d735b-e62b-4a2e-b15a-6e41622c4ea6",
+                  "text": "Check provider rate limit configuration and ceiling",
+                  "asked_at_ms": 204522,
+                  "addressee": null,
+                  "unanswered_age_ms": 69469
+                }
+              ]
+            },
+            "key": null
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "c78deab5-48a4-4528-b116-de0c9a8bd732",
+              "type": "resolution",
+              "connection_epoch": 0,
+              "turn_order": 42,
+              "speaker_label": "A",
+              "speaker_name": null,
+              "timestamp_ms": 273991,
+              "text": "Okay, declaring this resolved at 3:15. Thanks everyone, we'll do a proper postmortem tomorrow.",
+              "summary": "Incident declared resolved at 3:15",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.95,
+              "previous_speaker_label": null,
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "c78deab5-48a4-4528-b116-de0c9a8bd732"
+          },
+          {
+            "op": "set_resolved",
+            "value": true,
+            "key": null
+          }
+        ],
+        "provenance": {
+          "c78deab5-48a4-4528-b116-de0c9a8bd732": {
+            "provider": "anthropic",
+            "model": "claude-haiku-4-5-20251001",
+            "request_id": "msg_011CfJHnZdMaLmFAub31bLjV"
+          }
+        }
+      }
+    },
+    {
+      "emit_at_ms": 287955,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc",
+              "type": "hypothesis",
+              "connection_epoch": 0,
+              "turn_order": 6,
+              "speaker_label": "D",
+              "speaker_name": null,
+              "timestamp_ms": 38425,
+              "text": "First thing I check is DNS. We had a resolver issue last month that looked a lot like this. Could be the connection pool. If we're exhausting database connections, we'd",
+              "summary": "DNS resolver issue or connection pool exhaustion",
+              "hypothesis_id": "dns-or-pool",
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.7,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "7919337b-9b54-4bf4-89d8-7742daaf1353",
+              "type": "status_change",
+              "connection_epoch": 0,
+              "turn_order": 11,
+              "speaker_label": "D",
+              "speaker_name": null,
+              "timestamp_ms": 72329,
+              "text": "DNS is fine. I checked the resolver. Queries are resolving normally. Latency is flat. It's not that. Good, that's one down.",
+              "summary": "Ruled out DNS",
+              "hypothesis_id": "dns-or-pool",
+              "new_state": "ruled_out",
+              "owner": null,
+              "confidence": 0.95,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "7919337b-9b54-4bf4-89d8-7742daaf1353"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "b3a9807b-efe9-4873-bf45-7a2a089eab00",
+              "type": "status_change",
+              "connection_epoch": 0,
+              "turn_order": 16,
+              "speaker_label": "D",
+              "speaker_name": null,
+              "timestamp_ms": 104326,
+              "text": "And the provider status page is green. All their systems are operational. It's not upstream.",
+              "summary": "Ruled out upstream provider issue",
+              "hypothesis_id": "upstream-provider",
+              "new_state": "ruled_out",
+              "owner": null,
+              "confidence": 0.5,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": "dd65f268-811e-41f1-963a-123092939817",
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "b3a9807b-efe9-4873-bf45-7a2a089eab00"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 31,
+              "speaker_label": "D",
+              "speaker_name": null,
+              "timestamp_ms": 199663,
+              "text": "I'll watch the error rate and tell you when it drops.",
+              "summary": "Watch error rate and report when it drops",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": "D",
+              "confidence": 0.9,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e"
+          },
+          {
+            "op": "upsert_event",
+            "value": {
+              "event_id": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1",
+              "type": "action",
+              "connection_epoch": 0,
+              "turn_order": 35,
+              "speaker_label": "D",
+              "speaker_name": null,
+              "timestamp_ms": 226169,
+              "text": "Rollback is going out. I can see the new pods coming up.",
+              "summary": "Rollback going out, new pods coming up",
+              "hypothesis_id": null,
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.95,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": null,
+              "claim_assertion": null,
+              "claim_quote": null
+            },
+            "key": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1"
+          },
+          {
+            "op": "upsert_action",
+            "value": {
+              "action_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+              "text": "Watch error rate and report when it drops",
+              "owner": "D",
+              "at_ms": 199663,
+              "unowned": false
+            },
+            "key": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e"
+          },
+          {
+            "op": "upsert_hypothesis",
+            "value": {
+              "hypothesis_id": "dns-or-pool",
+              "text": "DNS resolver issue or connection pool exhaustion",
+              "state": "ruled_out",
+              "raised_by_label": "D",
+              "raised_at_ms": 38425,
+              "resolved_at_ms": 72329,
+              "implicit": false
+            },
+            "key": "dns-or-pool"
+          },
+          {
+            "op": "reconciliation",
+            "value": {
+              "events_touched": 5,
+              "speakers": [
+                {
+                  "turn_key": "e0/t6",
+                  "event_id": "b6d5a6a6-a8a6-4bbf-b7c9-edae5e5181cc",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "D"
+                },
+                {
+                  "turn_key": "e0/t11",
+                  "event_id": "7919337b-9b54-4bf4-89d8-7742daaf1353",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "D"
+                },
+                {
+                  "turn_key": "e0/t16",
+                  "event_id": "b3a9807b-efe9-4873-bf45-7a2a089eab00",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "D"
+                },
+                {
+                  "turn_key": "e0/t31",
+                  "event_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "D"
+                },
+                {
+                  "turn_key": "e0/t35",
+                  "event_id": "f2c9c5d2-ea0b-43e2-9200-c7b97bcc9ed1",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "D"
+                }
+              ],
+              "owners": [
+                {
+                  "action_id": "26a4a965-0a3f-43a9-b3a4-ff3c9cc2fd7e",
+                  "previous_owner": "C",
+                  "owner": "D"
+                }
+              ]
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 287956,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    },
+    {
+      "emit_at_ms": 288327,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "set_latency",
+            "value": {
+              "asr_ms": 1581.4700830001384,
+              "extract_ms": 1233.129750000313,
+              "e2e_ms": 2974.8730830010027
+            },
+            "key": null
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -6,8 +6,9 @@ Run it against a recording:
 
 Design notes that are not obvious from the API:
 
-- A turn finalizes twice. The unformatted final is what we time; the formatted
-  final is what we read. See "Known API behaviours" in CLAUDE.md.
+- Docs describe a two-phase final (unformatted then formatted). On our config
+  only the formatted final arrives. ASR latency is audio-sent → formatted
+  final. See "Known API behaviours" in CLAUDE.md.
 - `turn_order` and word timestamps are both **per connection**, and both reset
   to zero on reconnect. Since turn_order is our join key for speaker revisions,
   a reconnect would silently alias turn 0 of the second connection onto turn 0
@@ -18,6 +19,14 @@ Design notes that are not obvious from the API:
 - `client.stream()` returns as soon as bytes are queued and becomes a silent
   no-op once the socket is gone. A dropped connection therefore looks exactly
   like silence unless you watch for it, which is what `_alive` is for.
+- Close codes matter when reading logs: **1006** is an abnormal WebSocket
+  close (no close frame — often a stalled pump / half-open socket). That is
+  not idle timeout **3006**, not session-max **3008**, and not a short
+  duration cap (AssemblyAI's streaming session limit is hours, not ~280s).
+  After reconnect, ignore events from the previous `StreamingClient`
+  (`client is not self._client`) so a late turn is not tagged with the new
+  epoch, and reset file-source pacing so realtime replay does not catch-up
+  flood audio that piled up during the stall.
 """
 
 from __future__ import annotations
@@ -60,6 +69,20 @@ from backend.transcription.buffer import (
 UNKNOWN_SPEAKER = "?"
 
 
+def load_keyterms(path: Path | None = None) -> list[str]:
+    """One keyterm per line from demo/script/keyterms.txt. Blank/# lines skip."""
+    path = path or (config.REPO_ROOT / "demo" / "script" / "keyterms.txt")
+    if not path.is_file():
+        return []
+    terms: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        term = line.strip()
+        if not term or term.startswith("#"):
+            continue
+        terms.append(term)
+    return terms
+
+
 @dataclass
 class StreamConfig:
     """Everything tunable about one spike run."""
@@ -68,6 +91,9 @@ class StreamConfig:
     max_speakers: int | None = config.MAX_SPEAKERS
     format_turns: bool = config.FORMAT_TURNS
     pause_ms: int = PAUSE_MS
+    # AssemblyAI v3 `keyterms_prompt` — loaded from demo/script/keyterms.txt
+    # unless overridden. Empty list means omit the parameter.
+    keyterms: list[str] = field(default_factory=load_keyterms)
 
     # Reconnect policy. Exponential with full jitter, so a server-side blip
     # does not turn into a synchronised retry storm.
@@ -81,13 +107,16 @@ class StreamConfig:
     handshake_timeout_s: float = 10.0
 
     def to_params(self) -> StreamingParameters:
-        return StreamingParameters(
-            sample_rate=config.SAMPLE_RATE,
-            encoding=config.ENCODING,
-            format_turns=self.format_turns,
-            speaker_labels=self.speaker_labels,
-            max_speakers=self.max_speakers,
-        )
+        kwargs: dict = {
+            "sample_rate": config.SAMPLE_RATE,
+            "encoding": config.ENCODING,
+            "format_turns": self.format_turns,
+            "speaker_labels": self.speaker_labels,
+            "max_speakers": self.max_speakers,
+        }
+        if self.keyterms:
+            kwargs["keyterms_prompt"] = list(self.keyterms)
+        return StreamingParameters(**kwargs)
 
 
 @dataclass
@@ -176,8 +205,10 @@ class TranscriptionStream:
         self._last_error = None
         self._alive.set()
         self._begin.clear()
-        client.connect(self.config.to_params())
+        # Publish identity before connect() so Begin/Error cannot race a
+        # stale-client check against a still-None `_client`.
         self._client = client
+        client.connect(self.config.to_params())
 
         # Wait for Begin. Without this an invalid key looks like a healthy
         # session that simply never transcribes anything, and we cheerfully
@@ -192,6 +223,24 @@ class TranscriptionStream:
             f"no Begin within {self.config.handshake_timeout_s:.0f}s "
             "- the session was never established"
         )
+
+    def _is_stale_client(self, client: StreamingClient | None) -> bool:
+        """True when `client` is a previous StreamingClient after reconnect.
+
+        Handlers may still fire from a half-closed socket. Tagging those
+        turns with the new epoch would silently corrupt attribution.
+        `client is None` (unit tests) is never treated as stale.
+        """
+        current = self._client
+        return client is not None and current is not None and client is not current
+
+    def _disconnect_client(self, client: StreamingClient | None, *, terminate: bool) -> None:
+        if client is None:
+            return
+        try:
+            client.disconnect(terminate=terminate)
+        except (StreamingError, OSError, RuntimeError):
+            pass
 
     def _session_dead(self) -> bool:
         if not self._alive.is_set():
@@ -218,6 +267,12 @@ class TranscriptionStream:
             )
             time.sleep(delay)
 
+            # Drop the dead client before opening another. Leaving it alive
+            # lets late reader-thread events race the new epoch, and keeps a
+            # ControllableFileSource wall clock stuck in catch-up mode.
+            old, self._client = self._client, None
+            self._disconnect_client(old, terminate=False)
+
             with self._lock:
                 # A fresh connection restarts turn_order at 0 and word
                 # timestamps at 0. Bump the epoch so turn keys stay unique,
@@ -234,6 +289,9 @@ class TranscriptionStream:
                 continue
 
             self.reconnects += 1
+            reset = getattr(self.chunks, "reset_pacing", None)
+            if callable(reset):
+                reset()
             self.on_status(
                 f"reconnected as epoch {self._session.epoch}; the server "
                 f"restarts turn numbering at 0"
@@ -248,34 +306,39 @@ class TranscriptionStream:
     def close(self) -> None:
         self._closing = True
         client, self._client = self._client, None
-        if client is not None:
-            try:
-                client.disconnect(terminate=True)
-            except (StreamingError, OSError, RuntimeError):
-                pass
+        self._disconnect_client(client, terminate=True)
 
     # --- event handlers (SDK reader thread) --------------------------------
 
-    def _handle_begin(self, _client: StreamingClient, event: BeginEvent) -> None:
+    def _handle_begin(self, client: StreamingClient, event: BeginEvent) -> None:
+        if self._is_stale_client(client):
+            return
         self._session.session_id = event.id
         self._last_error = None
         self._begin.set()
         self.on_status(f"session {event.id} open")
 
-    def _handle_error(self, _client: StreamingClient, error: StreamingError) -> None:
+    def _handle_error(self, client: StreamingClient, error: StreamingError) -> None:
+        if self._is_stale_client(client):
+            return
         self._last_error = str(error)
         self._alive.clear()
+        self.on_status(f"stream error: {error}")
 
     def _handle_termination(
-        self, _client: StreamingClient, event: TerminationEvent
+        self, client: StreamingClient, event: TerminationEvent
     ) -> None:
+        if self._is_stale_client(client):
+            return
         self._alive.clear()
         if self._closing:
             self.on_status(
                 f"session closed after {event.audio_duration_seconds}s of audio"
             )
 
-    def _handle_turn(self, _client: StreamingClient, event: TurnEvent) -> None:
+    def _handle_turn(self, client: StreamingClient, event: TurnEvent) -> None:
+        if self._is_stale_client(client):
+            return
         if not event.end_of_turn:
             return  # partials are not this spike's business
 
@@ -289,7 +352,9 @@ class TranscriptionStream:
 
         latency: float | None = None
         if not event.turn_is_formatted:
-            # The unformatted final is the honest moment the words existed.
+            # Docs still describe this pass; our config never sends it. Keep
+            # the branch so a two-phase session would still time the earlier
+            # moment and skip a second ASR sample on the formatted follow-up.
             latency = self.clock.latency_ms(end_ms)
             if latency is not None:
                 self.metrics.record(ASR, latency)
@@ -300,6 +365,14 @@ class TranscriptionStream:
             first = self.revisions.first_seen(key)
             if first is not None:
                 self.metrics.record(FORMAT, max(0.0, now_ms() - first))
+            else:
+                # Observed config: only the formatted final arrives.
+                # ASR = audio chunk sent → formatted final received.
+                latency = self.clock.latency_ms(end_ms)
+                if latency is not None:
+                    self.metrics.record(ASR, latency)
+                with self._lock:
+                    self.turns_seen += 1
             with self._lock:
                 # Diarization can also settle between the two finals.
                 self.revisions.note_turn(key, speaker)
@@ -321,8 +394,10 @@ class TranscriptionStream:
             self.on_utterance(utterance)
 
     def _handle_revision(
-        self, _client: StreamingClient, event: SpeakerRevisionEvent
+        self, client: StreamingClient, event: SpeakerRevisionEvent
     ) -> None:
+        if self._is_stale_client(client):
+            return
         for item in event.revisions:
             with self._lock:
                 # A revision always refers to a turn on the connection that
@@ -363,8 +438,20 @@ class TranscriptionStream:
             for utterance in trailing:
                 self.on_utterance(utterance)
 
+    def request_stop(self) -> None:
+        """Ask the pump to exit. Safe to call from another thread."""
+        self._closing = True
+        self._alive.clear()
+        chunks = self.chunks
+        stop = getattr(chunks, "stop", None)
+        if callable(stop):
+            stop()
+        self._disconnect_client(self._client, terminate=False)
+
     def _pump(self) -> None:
         for chunk in self.chunks:
+            if self._closing:
+                return
             if self._session_dead() and not self._closing:
                 if not self._reconnect():
                     return
@@ -464,8 +551,8 @@ def _print_report(stream: TranscriptionStream, printer: _Printer) -> None:
     print(f"  {m.summary(FORMAT)}")
     print(
         printer._c(
-            "  asr    = audio chunk sent -> unformatted final received\n"
-            "  format = unformatted final -> formatted final, same turn",
+            "  asr    = audio chunk sent -> formatted final received\n"
+            "  format = unformatted -> formatted gap (only when both arrive)",
             DIM,
         )
     )

@@ -1,9 +1,22 @@
-import type { Event, IncidentState } from "../contract";
+import type {
+  Event,
+  IncidentState,
+  DiffOp,
+  Hypothesis,
+  Thread,
+  Action,
+  Latency,
+  ReconciliationSummary,
+  SilenceSummary,
+  Contradiction,
+} from "../contract";
+import { turnKey } from "../contract";
 import type {
   DashboardState,
   DashboardAction,
   TimelineRow,
   HypothesisNode,
+  GroundingRefusal,
 } from "./types";
 
 export function makeInitialState(incidentId: string): DashboardState {
@@ -11,12 +24,23 @@ export function makeInitialState(incidentId: string): DashboardState {
     incident_id: incidentId,
     started_at_ms: 0,
     resolved: false,
-    timelineByTurnOrder: {},
+    timelineById: {},
     hypothesesById: {},
     threadsById: {},
     actionsById: {},
     latency: { asr_ms: 0, extract_ms: 0, e2e_ms: 0 },
     hypothesisRaisedTurn: {},
+    reconciliation: null,
+    silence: null,
+    contradictions: [],
+    transportError: null,
+    providerError: null,
+    refusals: [],
+    provenanceById: {},
+    reconciliationBeatAt: null,
+    reconciliationBeatId: 0,
+    contradictionBeatAt: null,
+    contradictionBeatId: 0,
     clock_ms: 0,
     ingested: 0,
   };
@@ -27,8 +51,12 @@ function isTimelineWorthy(type: Event["type"]): boolean {
   return type !== "noise" && type !== "speaker_amended";
 }
 
-function toRow(e: Event): TimelineRow {
+function toRow(
+  e: Event,
+  provenance?: { provider: string; model: string } | null
+): TimelineRow {
   return {
+    connection_epoch: e.connection_epoch,
     turn_order: e.turn_order,
     event_id: e.event_id,
     type: e.type,
@@ -40,13 +68,37 @@ function toRow(e: Event): TimelineRow {
     confidence: e.confidence,
     amendedFrom: null,
     correctedAt: null,
+    extractionModel: provenance?.model ?? null,
+    extractionProvider: provenance?.provider ?? null,
   };
+}
+
+function amendRowsForTurn(
+  timelineById: Record<string, TimelineRow>,
+  epoch: number,
+  order: number,
+  newLabel: string,
+  previousLabel: string | null,
+  now: number
+): Record<string, TimelineRow> {
+  let changed = false;
+  const next = { ...timelineById };
+  for (const [id, row] of Object.entries(timelineById)) {
+    if (row.connection_epoch !== epoch || row.turn_order !== order) continue;
+    next[id] = {
+      ...row,
+      speaker_label: newLabel,
+      amendedFrom: previousLabel ?? row.speaker_label,
+      correctedAt: now,
+    };
+    changed = true;
+  }
+  return changed ? next : timelineById;
 }
 
 /**
  * Apply a single wire Event to the keyed maps. Pure: returns a new state.
- * Every branch upserts on a stable key so a re-emitted event_id / turn_order
- * corrects in place instead of duplicating.
+ * Upserts on event_id. Speaker amendments hit every event sharing the turn key.
  */
 function applyEvent(state: DashboardState, e: Event, now: number): DashboardState {
   const next: DashboardState = {
@@ -55,25 +107,17 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
     clock_ms: Math.max(state.clock_ms, e.timestamp_ms),
   };
 
-  // --- Retroactive speaker amendment -------------------------------------
-  // Find the already-shown turn by turn_order and correct it IN PLACE. Never
-  // create a new row; keep the original timestamp, summary and text.
   if (e.type === "speaker_amended") {
-    const existing = state.timelineByTurnOrder[e.turn_order];
-    if (existing) {
-      next.timelineByTurnOrder = {
-        ...state.timelineByTurnOrder,
-        [e.turn_order]: {
-          ...existing,
-          speaker_label: e.speaker_label,
-          amendedFrom: e.previous_speaker_label ?? existing.speaker_label,
-          correctedAt: now,
-        },
-      };
-    }
-    // If that turn raised a hypothesis, re-attribute it too (labels are subject
-    // to revision; the board should reflect the corrected speaker).
-    const hypId = state.hypothesisRaisedTurn[e.turn_order];
+    next.timelineById = amendRowsForTurn(
+      state.timelineById,
+      e.connection_epoch,
+      e.turn_order,
+      e.speaker_label,
+      e.previous_speaker_label,
+      now
+    );
+    const tk = turnKey(e);
+    const hypId = state.hypothesisRaisedTurn[tk];
     if (hypId && state.hypothesesById[hypId]) {
       next.hypothesesById = {
         ...state.hypothesesById,
@@ -87,24 +131,24 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
     return next;
   }
 
-  // --- Meaningful utterances become / refresh a timeline row -------------
   if (isTimelineWorthy(e.type)) {
-    const prior = state.timelineByTurnOrder[e.turn_order];
-    next.timelineByTurnOrder = {
-      ...state.timelineByTurnOrder,
-      [e.turn_order]: prior
-        ? // Upsert: keep any correction highlight already applied to this turn.
-          {
-            ...toRow(e),
+    const prior = state.timelineById[e.event_id];
+    const prov = state.provenanceById[e.event_id] ?? null;
+    next.timelineById = {
+      ...state.timelineById,
+      [e.event_id]: prior
+        ? {
+            ...toRow(e, prov),
             speaker_label: prior.amendedFrom ? prior.speaker_label : e.speaker_label,
             amendedFrom: prior.amendedFrom,
             correctedAt: prior.correctedAt,
+            extractionModel: prior.extractionModel ?? prov?.model ?? null,
+            extractionProvider: prior.extractionProvider ?? prov?.provider ?? null,
           }
-        : toRow(e),
+        : toRow(e, prov),
     };
   }
 
-  // --- Entity side-effects ------------------------------------------------
   switch (e.type) {
     case "hypothesis": {
       if (e.hypothesis_id) {
@@ -118,6 +162,7 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
               raised_by_label: e.speaker_label,
               raised_at_ms: e.timestamp_ms,
               resolved_at_ms: null,
+              implicit: false,
               prevState: null,
               movedAt: null,
               correctedAt: null,
@@ -125,7 +170,7 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
         next.hypothesesById = { ...state.hypothesesById, [e.hypothesis_id]: node };
         next.hypothesisRaisedTurn = {
           ...state.hypothesisRaisedTurn,
-          [e.turn_order]: e.hypothesis_id,
+          [turnKey(e)]: e.hypothesis_id,
         };
       }
       break;
@@ -141,6 +186,7 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
           raised_by_label: e.speaker_label,
           raised_at_ms: e.timestamp_ms,
           resolved_at_ms: null,
+          implicit: true,
           prevState: null,
           movedAt: null,
           correctedAt: null,
@@ -160,7 +206,6 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
     }
 
     case "thread": {
-      // thread_id keyed on the originating event_id (stable, upsertable).
       next.threadsById = {
         ...state.threadsById,
         [e.event_id]: {
@@ -169,6 +214,11 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
           owner: e.owner,
           opened_at_ms: e.timestamp_ms,
           closed: false,
+          asked_at_ms: e.timestamp_ms,
+          addressee: e.addressee ?? null,
+          answered: false,
+          answered_at_ms: null,
+          unanswered_age_ms: null,
         },
       };
       break;
@@ -182,8 +232,14 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
           text: e.summary || e.text,
           owner: e.owner,
           at_ms: e.timestamp_ms,
+          unowned: !e.owner || e.owner.trim() === "",
         },
       };
+      break;
+    }
+
+    case "resolution": {
+      next.resolved = true;
       break;
     }
 
@@ -192,20 +248,39 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
       break;
   }
 
+  // Linked answer: mark the thread answered + closed (leaves open list).
+  if (e.answers_thread_id && next.threadsById[e.answers_thread_id]) {
+    const tid = e.answers_thread_id;
+    const existing = next.threadsById[tid];
+    if (!existing.answered) {
+      next.threadsById = {
+        ...next.threadsById,
+        [tid]: {
+          ...existing,
+          answered: true,
+          answered_at_ms: e.timestamp_ms,
+          closed: true,
+          unanswered_age_ms: null,
+        },
+      };
+    }
+  }
+
   return next;
 }
 
-/**
- * Rebuild keyed maps from a full IncidentState snapshot. This is the path the
- * live backend uses for catch-up / authoritative sync. Not used by the mock,
- * but wired so the same reducer serves both transports unchanged.
- */
-function applySnapshot(snap: IncidentState): DashboardState {
+function applySnapshot(
+  snap: IncidentState,
+  provenance?: Record<string, { provider: string; model: string; request_id?: string | null }>,
+  refusals?: GroundingRefusal[]
+): DashboardState {
   let next: DashboardState = {
     ...makeInitialState(snap.incident_id),
     started_at_ms: snap.started_at_ms,
     resolved: snap.resolved,
     latency: snap.latency,
+    provenanceById: provenance ? { ...provenance } : {},
+    refusals: refusals ? [...refusals] : [],
   };
   const now = Date.now();
   for (const e of snap.timeline) next = applyEvent(next, e, now);
@@ -220,8 +295,151 @@ function applySnapshot(snap: IncidentState): DashboardState {
   }
   for (const t of snap.threads) next.threadsById[t.thread_id] = t;
   for (const a of snap.actions) next.actionsById[a.action_id] = a;
+  next.silence = snap.silence ?? null;
+  next.contradictions = snap.contradictions ? [...snap.contradictions] : [];
   next.clock_ms = snap.timeline.reduce((m, e) => Math.max(m, e.timestamp_ms), 0);
   return next;
+}
+
+function upsertHypothesis(
+  state: DashboardState,
+  h: Hypothesis,
+  now: number
+): DashboardState {
+  const existing = state.hypothesesById[h.hypothesis_id];
+  const moved =
+    existing != null && existing.state !== h.state
+      ? { prevState: existing.state, movedAt: now }
+      : {
+          prevState: existing?.prevState ?? null,
+          movedAt: existing?.movedAt ?? null,
+        };
+  return {
+    ...state,
+    ingested: state.ingested + 1,
+    hypothesesById: {
+      ...state.hypothesesById,
+      [h.hypothesis_id]: {
+        ...h,
+        ...moved,
+        correctedAt: existing?.correctedAt ?? null,
+      },
+    },
+  };
+}
+
+function applyOp(state: DashboardState, op: DiffOp, now: number): DashboardState {
+  switch (op.op) {
+    case "upsert_event": {
+      const e = op.value as Event;
+      return applyEvent(state, e, now);
+    }
+    case "upsert_hypothesis":
+      return upsertHypothesis(state, op.value as Hypothesis, now);
+    case "upsert_thread": {
+      const t = op.value as Thread;
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        threadsById: { ...state.threadsById, [t.thread_id]: t },
+      };
+    }
+    case "upsert_action": {
+      const a = op.value as Action;
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        actionsById: { ...state.actionsById, [a.action_id]: a },
+      };
+    }
+    case "set_resolved":
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        resolved: op.value as boolean,
+      };
+    case "set_latency":
+      return {
+        ...state,
+        latency: op.value as Latency,
+      };
+    case "reconciliation": {
+      const summary = op.value as ReconciliationSummary;
+      let timelineById = state.timelineById;
+      let hypothesesById = state.hypothesesById;
+      // Corrections already landed as upsert_* ops; still mark UI highlights
+      // from the summary so the board shows what moved.
+      for (const sc of summary.speakers) {
+        const match = /^e(\d+)\/t(\d+)$/.exec(sc.turn_key);
+        if (!match) continue;
+        const epoch = Number(match[1]);
+        const order = Number(match[2]);
+        timelineById = amendRowsForTurn(
+          timelineById,
+          epoch,
+          order,
+          sc.speaker_label,
+          sc.previous_speaker_label,
+          now
+        );
+        const hypId = state.hypothesisRaisedTurn[sc.turn_key];
+        if (hypId && hypothesesById[hypId]) {
+          hypothesesById = {
+            ...hypothesesById,
+            [hypId]: {
+              ...hypothesesById[hypId],
+              raised_by_label: sc.speaker_label,
+              correctedAt: now,
+            },
+          };
+        }
+      }
+      let actionsById = state.actionsById;
+      for (const oc of summary.owners) {
+        const existing = actionsById[oc.action_id];
+        if (!existing) continue;
+        actionsById = {
+          ...actionsById,
+          [oc.action_id]: {
+            ...existing,
+            owner: oc.owner,
+            unowned: oc.owner == null || oc.owner.trim() === "",
+          },
+        };
+      }
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        timelineById,
+        hypothesesById,
+        actionsById,
+        reconciliation: summary,
+        // New beat every time the op lands (including seek re-play).
+        reconciliationBeatAt: now,
+        reconciliationBeatId: state.reconciliationBeatId + 1,
+      };
+    }
+    case "silence_summary":
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        silence: op.value as SilenceSummary,
+      };
+    case "contradiction":
+      return {
+        ...state,
+        ingested: state.ingested + 1,
+        contradictions: [
+          ...state.contradictions,
+          op.value as Contradiction,
+        ],
+        // New beat every time the op lands (including seek re-play).
+        contradictionBeatAt: now,
+        contradictionBeatId: state.contradictionBeatId + 1,
+      };
+    default:
+      return state;
+  }
 }
 
 export function dashboardReducer(
@@ -232,9 +450,30 @@ export function dashboardReducer(
     case "INGEST":
       return applyEvent(state, action.event, Date.now());
     case "SNAPSHOT":
-      return applySnapshot(action.state);
+      return applySnapshot(action.state, action.provenance, action.refusals);
+    case "DIFF": {
+      const now = Date.now();
+      let next = state;
+      if (action.provenance && Object.keys(action.provenance).length > 0) {
+        next = {
+          ...next,
+          provenanceById: { ...next.provenanceById, ...action.provenance },
+        };
+      }
+      if (action.refusals && action.refusals.length > 0) {
+        next = {
+          ...next,
+          refusals: [...next.refusals, ...action.refusals],
+        };
+      }
+      return action.ops.reduce((s, op) => applyOp(s, op, now), next);
+    }
     case "LATENCY":
       return { ...state, latency: action.latency };
+    case "TRANSPORT_ERROR":
+      return { ...state, transportError: action.message };
+    case "PROVIDER_ERROR":
+      return { ...state, providerError: action.message };
     case "RESET":
       return makeInitialState(action.incidentId);
     default:

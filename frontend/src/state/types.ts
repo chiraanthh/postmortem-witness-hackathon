@@ -5,22 +5,26 @@ import type {
   Action,
   Latency,
   IncidentState,
+  DiffOp,
+  ReconciliationSummary,
+  SilenceSummary,
+  Contradiction,
 } from "../contract";
 
 /**
  * State is stored as KEYED MAPS, never append-only arrays. Sorted arrays are
  * derived at render time (see selectors.ts). Keys:
- *   - timeline    : by turn_order  (the ASR join key; amendments target it)
+ *   - timeline    : by event_id  (unique; several events can share one turn)
  *   - hypotheses  : by hypothesis_id
- *   - threads     : by thread_id (== originating event_id)
- *   - actions     : by action_id (== originating event_id)
+ *   - threads     : by thread_id
+ *   - actions     : by action_id
+ *
+ * Speaker amendments join on turnKey(connection_epoch, turn_order), not bare
+ * turn_order — turn_order restarts at 0 on every reconnect.
  */
 
-/**
- * One rendered timeline row. Derived from an Event, but enriched with UI-only
- * fields that never travel on the wire (correction highlight, etc.).
- */
 export interface TimelineRow {
+  connection_epoch: number;
   turn_order: number;
   event_id: string;
   type: Event["type"];
@@ -34,6 +38,9 @@ export interface TimelineRow {
   amendedFrom: string | null;
   /** Wall-clock ms of the last amendment, used to fire a one-shot highlight. */
   correctedAt: number | null;
+  /** Extraction backend that produced this event (sidecar, not on Event). */
+  extractionModel: string | null;
+  extractionProvider: string | null;
 }
 
 /** A hypothesis plus UI-only movement bookkeeping for the board animation. */
@@ -51,29 +58,103 @@ export interface DashboardState {
   started_at_ms: number;
   resolved: boolean;
 
-  timelineByTurnOrder: Record<number, TimelineRow>;
+  timelineById: Record<string, TimelineRow>;
   hypothesesById: Record<string, HypothesisNode>;
   threadsById: Record<string, Thread>;
   actionsById: Record<string, Action>;
   latency: Latency;
 
-  /** Internal join table: which turn raised which hypothesis, for amendments. */
-  hypothesisRaisedTurn: Record<number, string>;
+  /** turnKey → hypothesis_id, so a speaker amendment can re-attribute a card. */
+  hypothesisRaisedTurn: Record<string, string>;
+
+  /** Last teardown reconciliation summary, if any. */
+  reconciliation: ReconciliationSummary | null;
+
+  /** Silence accounting; null until resolution emits silence_summary. */
+  silence: SilenceSummary | null;
+
+  /** Detected claim contradictions, in emission order. */
+  contradictions: Contradiction[];
+
+  /** Loud transport failure (e.g. contract version mismatch). */
+  transportError: string | null;
+
+  /** Loud extraction provider failure (no silent cross-provider fallback). */
+  providerError: string | null;
+
+  /** Grounding-guard declines (sidecar). Not on the frozen Event schema. */
+  refusals: GroundingRefusal[];
+
+  /** event_id → which model answered. Outside frozen Event schema. */
+  provenanceById: Record<
+    string,
+    { provider: string; model: string; request_id?: string | null }
+  >;
+
+  /**
+   * Wall-clock ms when the latest reconciliation op arrived. Drives the
+   * visible beat; increments on every reconciliation so seek can re-play it.
+   */
+  reconciliationBeatAt: number | null;
+  reconciliationBeatId: number;
+
+  /**
+   * Wall-clock ms when the latest contradiction op arrived. Seek re-plays
+   * the highlight the same way reconciliation does.
+   */
+  contradictionBeatAt: number | null;
+  contradictionBeatId: number;
 
   /** Furthest incident-audio time seen, drives the "elapsed" clock. */
   clock_ms: number;
-  /** How many wire messages have been ingested — a liveness counter. */
+  /** How many wire messages / ops have been ingested — a liveness counter. */
   ingested: number;
 }
 
+
 /**
- * Reducer actions mirror the wire's `oneOf`: a single Event, or a full
- * IncidentState snapshot. LATENCY is a live transport signal (the contract
- * carries latency only inside IncidentState, so the transport surfaces rolling
- * samples through this action). RESET restarts a demo run.
+ * Reducer actions mirror the live wire: handshake-gated snapshot, then diffs.
+ * INGEST remains for the mock emitter (single Events). LATENCY is unused on
+ * the live path (set_latency arrives as a DiffOp).
  */
+export type EventProvenance = {
+  provider: string;
+  model: string;
+  request_id?: string | null;
+};
+
+/** Sidecar from the grounding guard — claim declined, board unchanged. */
+export type GroundingRefusal = {
+  kind: "grounding_refusal";
+  recorded: false | boolean;
+  claimed_hypothesis_id: string | null;
+  claimed_new_state: string | null;
+  claimed_quote: string | null;
+  reason: string;
+  utterance_text: string;
+  speaker_label: string;
+  timestamp_ms: number;
+  connection_epoch?: number;
+  turn_order?: number;
+  provider?: string | null;
+  model?: string | null;
+};
+
 export type DashboardAction =
   | { type: "INGEST"; event: Event }
-  | { type: "SNAPSHOT"; state: IncidentState }
+  | {
+      type: "SNAPSHOT";
+      state: IncidentState;
+      provenance?: Record<string, EventProvenance>;
+      refusals?: GroundingRefusal[];
+    }
+  | {
+      type: "DIFF";
+      ops: DiffOp[];
+      provenance?: Record<string, EventProvenance>;
+      refusals?: GroundingRefusal[];
+    }
   | { type: "LATENCY"; latency: Latency }
+  | { type: "TRANSPORT_ERROR"; message: string }
+  | { type: "PROVIDER_ERROR"; message: string }
   | { type: "RESET"; incidentId: string };

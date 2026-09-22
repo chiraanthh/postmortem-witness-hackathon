@@ -132,6 +132,26 @@ Never let the summary decide the type - classify first, then describe.
 - confidence: your honest confidence. Below 0.5 for anything you are \
 guessing at.
 - Never invent detail that is not in the utterance.
+
+THREADS AND ANSWERS (short)
+
+- thread + named person asked → set addressee; else null.
+- answers_thread_id ONLY when this utterance clearly answers an OPEN \
+THREADS id — copy that id. Never infer. Null is the default.
+- Question-shaped assignments stay actions, not threads: \
+"Rohan, can you draft a status update?", "Someone needs to check X."
+
+CLAIMS (short)
+
+- On substantive events that assert a fact about a named subject (prefer \
+a board hypothesis id when the claim is about a known cause), set \
+claim_subject, claim_assertion, and claim_quote (verbatim from the \
+utterance).
+- Null all three when: noise with no claim, questions, hedges \
+("probably", "might", "I don't think"), pure status_change (ruling \
+out or confirming is NOT a claim), or restatements of the same fact.
+- Not claims: hedges, questions, status_change ruled_out, restating \
+"pool still looks fine".
 """
 
 

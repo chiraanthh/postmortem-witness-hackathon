@@ -1,0 +1,32 @@
+# Keeps the Railway demo process warm during judging windows.
+# Railway Hobby stays always-on when Serverless is OFF; this ping is a
+# backup if Serverless was left enabled or a proxy idles the connection.
+#
+# Set repository variable KEEPALIVE_URL to the public base, e.g.
+#   https://web-production-88f09e.up.railway.app
+# Workflow no-ops (succeeds) when the variable is unset.
+
+name: keepalive
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        env:
+          KEEPALIVE_URL: ${{ vars.KEEPALIVE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEEPALIVE_URL:-}" ]; then
+            echo "KEEPALIVE_URL unset — skip (set repo variable to enable)"
+            exit 0
+          fi
+          url="${KEEPALIVE_URL%/}/health"
+          echo "GET $url"
+          curl -fsS --max-time 30 "$url"
+          echo

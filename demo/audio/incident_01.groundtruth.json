@@ -4,7 +4,7 @@
   "script_file": "demo/script/incident_01.yaml",
   "sample_rate": 16000,
   "channels": 1,
-  "duration_ms": 271385,
+  "duration_ms": 282385,
   "synthesis": {
     "model": "bulbul:v3",
     "language_code": "en-IN",
@@ -70,22 +70,22 @@
       "adjacent": true
     },
     {
-      "later_line": 24,
-      "earlier_line": 23,
+      "later_line": 25,
+      "earlier_line": 24,
       "overlap_ms": 400,
       "flagged": true,
       "adjacent": true
     },
     {
-      "later_line": 27,
-      "earlier_line": 26,
+      "later_line": 28,
+      "earlier_line": 27,
       "overlap_ms": 400,
       "flagged": true,
       "adjacent": true
     },
     {
-      "later_line": 46,
-      "earlier_line": 45,
+      "later_line": 48,
+      "earlier_line": 47,
       "overlap_ms": 400,
       "flagged": true,
       "adjacent": true
@@ -325,8 +325,20 @@
       "index": 19,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 98774,
-      "end_ms": 104780,
+      "start_ms": 98223,
+      "end_ms": 101793,
+      "duration_ms": 3570,
+      "overlap": false,
+      "voice": "ritu",
+      "pace": 0.95,
+      "text": "So it's probably not the cache, I'd say we drop that one."
+    },
+    {
+      "index": 20,
+      "speaker": "C",
+      "speaker_name": "Priya",
+      "start_ms": 104274,
+      "end_ms": 110280,
       "duration_ms": 6006,
       "overlap": false,
       "voice": "ritu",
@@ -334,11 +346,11 @@
       "text": "And the provider status page is green. All their systems are operational. It's not upstream."
     },
     {
-      "index": 20,
+      "index": 21,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 105774,
-      "end_ms": 109529,
+      "start_ms": 111274,
+      "end_ms": 115029,
       "duration_ms": 3755,
       "overlap": false,
       "voice": "aditya",
@@ -346,11 +358,11 @@
       "text": "Okay, so it's us. Something changed on our side."
     },
     {
-      "index": 21,
+      "index": 22,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 111274,
-      "end_ms": 113749,
+      "start_ms": 116774,
+      "end_ms": 119249,
       "duration_ms": 2475,
       "overlap": false,
       "voice": "aditya",
@@ -358,11 +370,11 @@
       "text": "Did anything ship today? Any deploys?"
     },
     {
-      "index": 22,
+      "index": 23,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 115274,
-      "end_ms": 120136,
+      "start_ms": 120774,
+      "end_ms": 125636,
       "duration_ms": 4862,
       "overlap": false,
       "voice": "simran",
@@ -370,11 +382,11 @@
       "text": "There was a deploy, but it went out at one forty. That's forty minutes before any of this started."
     },
     {
-      "index": 23,
+      "index": 24,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 122074,
-      "end_ms": 126280,
+      "start_ms": 127574,
+      "end_ms": 131780,
       "duration_ms": 4206,
       "overlap": false,
       "voice": "simran",
@@ -382,11 +394,11 @@
       "text": "It passed all the tests, and we've had clean deploys on that pipeline for weeks."
     },
     {
-      "index": 24,
+      "index": 25,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 125880,
-      "end_ms": 128781,
+      "start_ms": 131380,
+      "end_ms": 134281,
       "duration_ms": 2901,
       "overlap": true,
       "voice": "aditya",
@@ -394,11 +406,11 @@
       "text": "Forty minutes is not that long. What was in it?"
     },
     {
-      "index": 25,
+      "index": 26,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 130880,
-      "end_ms": 135492,
+      "start_ms": 136380,
+      "end_ms": 140992,
       "duration_ms": 4612,
       "overlap": false,
       "voice": "simran",
@@ -406,11 +418,11 @@
       "text": "A retry logic change on the payment worker. Backoff configuration, mostly."
     },
     {
-      "index": 26,
+      "index": 27,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 136880,
-      "end_ms": 142965,
+      "start_ms": 142380,
+      "end_ms": 148465,
       "duration_ms": 6085,
       "overlap": false,
       "voice": "ritu",
@@ -418,11 +430,11 @@
       "text": "Hang on. If the retry logic changed, and we're seeing timeouts, those could absolutely be related."
     },
     {
-      "index": 27,
+      "index": 28,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 142565,
-      "end_ms": 143358,
+      "start_ms": 148065,
+      "end_ms": 148858,
       "duration_ms": 793,
       "overlap": true,
       "voice": "simran",
@@ -430,11 +442,11 @@
       "text": "Hmm."
     },
     {
-      "index": 28,
+      "index": 29,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 144565,
-      "end_ms": 151616,
+      "start_ms": 150065,
+      "end_ms": 157116,
       "duration_ms": 7051,
       "overlap": false,
       "voice": "simran",
@@ -442,11 +454,11 @@
       "text": "Actually, yeah. If the backoff is too aggressive we'd be hammering the provider and hitting their rate limit. That would look exactly like this."
     },
     {
-      "index": 29,
+      "index": 30,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 155265,
-      "end_ms": 157926,
+      "start_ms": 160765,
+      "end_ms": 163426,
       "duration_ms": 2661,
       "overlap": false,
       "voice": "simran",
@@ -454,11 +466,11 @@
       "text": "It lines up. I think it's the deploy."
     },
     {
-      "index": 30,
+      "index": 31,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 159565,
-      "end_ms": 161613,
+      "start_ms": 165065,
+      "end_ms": 167113,
       "duration_ms": 2048,
       "overlap": false,
       "voice": "aditya",
@@ -466,11 +478,23 @@
       "text": "Okay, that's our leading theory."
     },
     {
-      "index": 31,
+      "index": 32,
+      "speaker": "C",
+      "speaker_name": "Priya",
+      "start_ms": 167800,
+      "end_ms": 174355,
+      "duration_ms": 6555,
+      "overlap": false,
+      "voice": "ritu",
+      "pace": 0.95,
+      "text": "Hold on though — looking at the timeouts again, the pool has to be under pressure if we're seeing connection failures like this."
+    },
+    {
+      "index": 33,
       "speaker": "D",
       "speaker_name": "Rohan",
-      "start_ms": 164065,
-      "end_ms": 168844,
+      "start_ms": 175065,
+      "end_ms": 179844,
       "duration_ms": 4779,
       "overlap": false,
       "voice": "shubh",
@@ -478,11 +502,11 @@
       "text": "Also, unrelated, but the TLS certificate on the gateway expires in two days. Should someone be looking at that?"
     },
     {
-      "index": 32,
+      "index": 34,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 173565,
-      "end_ms": 175869,
+      "start_ms": 184565,
+      "end_ms": 186869,
       "duration_ms": 2304,
       "overlap": false,
       "voice": "aditya",
@@ -490,11 +514,11 @@
       "text": "Disha, how fast can you roll back?"
     },
     {
-      "index": 33,
+      "index": 35,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 178065,
-      "end_ms": 181052,
+      "start_ms": 189065,
+      "end_ms": 192052,
       "duration_ms": 2987,
       "overlap": false,
       "voice": "simran",
@@ -502,11 +526,11 @@
       "text": "Five minutes, maybe. The previous build is still in the registry."
     },
     {
-      "index": 34,
+      "index": 36,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 184565,
-      "end_ms": 186089,
+      "start_ms": 195565,
+      "end_ms": 197089,
       "duration_ms": 1524,
       "overlap": false,
       "voice": "simran",
@@ -514,11 +538,11 @@
       "text": "I'll roll back the deploy now."
     },
     {
-      "index": 35,
+      "index": 37,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 188565,
-      "end_ms": 191347,
+      "start_ms": 199565,
+      "end_ms": 202347,
       "duration_ms": 2782,
       "overlap": false,
       "voice": "ritu",
@@ -526,11 +550,11 @@
       "text": "I'll watch the error rate and tell you when it drops."
     },
     {
-      "index": 36,
+      "index": 38,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 193565,
-      "end_ms": 200733,
+      "start_ms": 204565,
+      "end_ms": 211733,
       "duration_ms": 7168,
       "overlap": false,
       "voice": "aditya",
@@ -538,11 +562,11 @@
       "text": "Someone needs to check the rate limit configuration on the provider side as well. We should know what our actual ceiling is."
     },
     {
-      "index": 37,
+      "index": 39,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 203565,
-      "end_ms": 207149,
+      "start_ms": 214565,
+      "end_ms": 218149,
       "duration_ms": 3584,
       "overlap": false,
       "voice": "aditya",
@@ -550,11 +574,11 @@
       "text": "Rohan, can you draft a status update for customers?"
     },
     {
-      "index": 38,
+      "index": 40,
       "speaker": "D",
       "speaker_name": "Rohan",
-      "start_ms": 208565,
-      "end_ms": 210869,
+      "start_ms": 219565,
+      "end_ms": 221869,
       "duration_ms": 2304,
       "overlap": false,
       "voice": "shubh",
@@ -562,11 +586,11 @@
       "text": "Yeah, I'll get something out in the next ten minutes."
     },
     {
-      "index": 39,
+      "index": 41,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 215065,
-      "end_ms": 218349,
+      "start_ms": 226065,
+      "end_ms": 229349,
       "duration_ms": 3284,
       "overlap": false,
       "voice": "ritu",
@@ -574,11 +598,11 @@
       "text": "Rollback is going out. I can see the new pods coming up."
     },
     {
-      "index": 40,
+      "index": 42,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 223065,
-      "end_ms": 226201,
+      "start_ms": 234065,
+      "end_ms": 237201,
       "duration_ms": 3136,
       "overlap": false,
       "voice": "ritu",
@@ -586,11 +610,11 @@
       "text": "Error rate is dropping. We're down to about twelve percent."
     },
     {
-      "index": 41,
+      "index": 43,
       "speaker": "D",
       "speaker_name": "Rohan",
-      "start_ms": 229565,
-      "end_ms": 232296,
+      "start_ms": 240565,
+      "end_ms": 243296,
       "duration_ms": 2731,
       "overlap": false,
       "voice": "shubh",
@@ -598,11 +622,11 @@
       "text": "Ticket rate has slowed too. Nothing new in the last two minutes."
     },
     {
-      "index": 42,
+      "index": 44,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 236065,
-      "end_ms": 240284,
+      "start_ms": 247065,
+      "end_ms": 251284,
       "duration_ms": 4219,
       "overlap": false,
       "voice": "ritu",
@@ -610,11 +634,11 @@
       "text": "Error rate is basically back to baseline now. We're under one percent."
     },
     {
-      "index": 43,
+      "index": 45,
       "speaker": "B",
       "speaker_name": "Disha",
-      "start_ms": 243565,
-      "end_ms": 249458,
+      "start_ms": 254565,
+      "end_ms": 260458,
       "duration_ms": 5893,
       "overlap": false,
       "voice": "simran",
@@ -622,11 +646,11 @@
       "text": "Yeah, it was the deploy. The rollback fixed it. I'll revert the retry change properly and put a test around it."
     },
     {
-      "index": 44,
+      "index": 46,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 252565,
-      "end_ms": 255552,
+      "start_ms": 263565,
+      "end_ms": 266552,
       "duration_ms": 2987,
       "overlap": false,
       "voice": "aditya",
@@ -634,11 +658,11 @@
       "text": "Good. Anyone object to calling this resolved?"
     },
     {
-      "index": 45,
+      "index": 47,
       "speaker": "C",
       "speaker_name": "Priya",
-      "start_ms": 257565,
-      "end_ms": 259788,
+      "start_ms": 268565,
+      "end_ms": 270788,
       "duration_ms": 2223,
       "overlap": false,
       "voice": "ritu",
@@ -646,11 +670,11 @@
       "text": "No, looks clean from here."
     },
     {
-      "index": 46,
+      "index": 48,
       "speaker": "D",
       "speaker_name": "Rohan",
-      "start_ms": 259388,
-      "end_ms": 260583,
+      "start_ms": 270388,
+      "end_ms": 271583,
       "duration_ms": 1195,
       "overlap": true,
       "voice": "shubh",
@@ -658,11 +682,11 @@
       "text": "Support side is quiet."
     },
     {
-      "index": 47,
+      "index": 49,
       "speaker": "A",
       "speaker_name": "Arjun",
-      "start_ms": 262888,
-      "end_ms": 269885,
+      "start_ms": 273888,
+      "end_ms": 280885,
       "duration_ms": 6997,
       "overlap": false,
       "voice": "aditya",

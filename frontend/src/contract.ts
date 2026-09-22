@@ -21,6 +21,12 @@ export type {
   OwnerChange,
   ReconciliationSummary,
   ReconciliationDiffOp,
+  SilenceSummary,
+  SilenceOpenThread,
+  SilenceSummaryDiffOp,
+  Contradiction,
+  ContradictionClaim,
+  ContradictionDiffOp,
 } from "../../shared/events";
 
 export {
@@ -28,6 +34,8 @@ export {
   isSpeakerAmended,
   isResolution,
   isReconciliation,
+  isSilence,
+  isContradiction,
   turnKey,
   groupByTurn,
   sameTurn,

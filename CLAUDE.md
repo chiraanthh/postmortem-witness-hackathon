@@ -61,7 +61,9 @@ addressees who never answered, and the still-open threads. Stored on
 **`contradiction` DiffOp.** Value is a `Contradiction` (`subject`,
 `earlier` / `later` `ContradictionClaim`s keyed by turn). Appended to
 `IncidentState.contradictions`. Claims come from the Event claim fields
-above; detection logic is not part of this bump.
+above. Backend detection + tests remain; the live UI panel is **not
+shipped** — Haiku at temp 0 does not emit grounded `claim_*` without a
+prompt change that cost recall, so the feature is implemented-but-unshipped.
 
 ## Contract v1.4.0
 
@@ -132,6 +134,14 @@ Anthropic SDK for extraction. Frontend is React + Vite (not your concern).
 Hackathon submission Sep 28 2026. Scope-cut aggressively.
 
 ## Known API behaviours
+
+**Extraction must not block the ASR audio pump.** Extraction used to run
+inline on the AssemblyAI callback / pump path. A ~2s Haiku call per
+utterance stalled PCM send, which produced mid-call WebSocket **1006**
+abnormal closes, reconnect storms, and a demo that died around ~162s of
+a ~282s call. Extraction is now serial on a dedicated `incident-extract`
+thread; the pump only enqueues. This is the class of bug that kills a
+live demo — never put LLM I/O on the audio thread again.
 
 Verified against the live docs on 2026-09-04. Do not rewrite the streaming
 client from memory — these details changed in the last year and the old

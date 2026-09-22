@@ -41,6 +41,8 @@ def event(
     confidence: float = 0.9,
     previous_speaker_label: str | None = None,
     event_id: str | None = None,
+    addressee: str | None = None,
+    answers_thread_id: str | None = None,
 ) -> Event:
     return Event(
         event_id=event_id or eid(),
@@ -57,6 +59,8 @@ def event(
         owner=owner,
         confidence=confidence,
         previous_speaker_label=previous_speaker_label,
+        addressee=addressee,
+        answers_thread_id=answers_thread_id,
     )
 
 

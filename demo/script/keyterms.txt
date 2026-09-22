@@ -1,0 +1,21 @@
+# Domain terms for AssemblyAI streaming keyterms_prompt.
+# One term per line. Blank lines and # comments are ignored.
+DNS
+resolver
+rollback
+backoff
+deploy
+deployment
+connection pool
+502
+TLS
+certificate
+gateway
+pods
+rate limit
+payment worker
+latency
+error rate
+status page
+upstream
+registry

@@ -1,6 +1,8 @@
 import type { IncidentStats } from "../state/selectors";
+import { CONTRACT_VERSION } from "../contract";
 import { formatClock } from "../lib/time";
 import { StatusPill } from "./StatusPill";
+import { ModelPicker } from "./ModelPicker";
 
 const NAV = [
   { id: "board", label: "Hypotheses" },
@@ -14,17 +16,29 @@ export function TopBar({
   status,
   clockMs,
   onReplay,
+  onLeave,
+  sessionLabel,
+  sessionId,
 }: {
   incidentId: string;
   status: IncidentStats["status"];
   clockMs: number;
   onReplay: () => void;
+  onLeave?: () => void;
+  sessionLabel?: string;
+  sessionId?: string | null;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-4 px-4 sm:px-6">
-        {/* Wordmark */}
-        <a href="#top" className="flex items-center gap-2.5">
+        {/* Wordmark — returns to portal when leave is available */}
+        <button
+          type="button"
+          onClick={onLeave}
+          disabled={!onLeave}
+          className="flex items-center gap-2.5 text-left disabled:cursor-default"
+          title={onLeave ? "Back to portal" : undefined}
+        >
           <span className="relative flex h-7 w-7 items-center justify-center">
             <span className="absolute inset-0 rounded-full border border-accent/40" />
             <span className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent border-r-accent animate-spinSlow" />
@@ -35,10 +49,11 @@ export function TopBar({
               Postmortem Witness
             </span>
             <span className="block text-[10px] leading-none tracking-[0.2em] text-inkFaint">
-              LISTENER · v1.1.0
+              LISTENER · v{CONTRACT_VERSION}
+              {sessionLabel ? ` · ${sessionLabel}` : ""}
             </span>
           </span>
-        </a>
+        </button>
 
         {/* Center nav — anchors to the four functional areas */}
         <nav className="mx-auto hidden items-center gap-1 rounded-full border border-line bg-panel/60 px-1.5 py-1 md:flex">
@@ -55,6 +70,7 @@ export function TopBar({
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-2.5 md:ml-0">
+          <ModelPicker sessionId={sessionId ?? null} />
           <StatusPill status={status} />
           <div className="hidden items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 sm:flex">
             <span className="text-[10px] uppercase tracking-[0.16em] text-inkFaint">
@@ -67,6 +83,16 @@ export function TopBar({
               {incidentId}
             </span>
           </div>
+          {onLeave && (
+            <button
+              type="button"
+              onClick={onLeave}
+              className="pill-btn border border-line2 bg-raised/70 text-ink hover:border-accent/50 hover:text-accentSoft"
+              title="Return to portal"
+            >
+              Portal
+            </button>
+          )}
           <button
             onClick={onReplay}
             className="pill-btn border border-line2 bg-raised/70 text-ink hover:border-accent/50 hover:text-accentSoft"

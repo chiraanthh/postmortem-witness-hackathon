@@ -6,6 +6,10 @@ const MAP: Record<string, { label: string; cls: string }> = {
   hypothesis: { label: "HYPOTHESIS", cls: "text-open border-open/30 bg-open/5" },
   status_change: { label: "STATUS", cls: "text-accentSoft border-accent/30 bg-accent/5" },
   thread: { label: "THREAD", cls: "text-rose-300 border-rose-400/30 bg-rose-400/5" },
+  resolution: {
+    label: "RESOLVED",
+    cls: "text-teal-300 border-teal-400/30 bg-teal-400/5",
+  },
   noise: { label: "NOISE", cls: "text-inkFaint border-line2 bg-raised/40" },
   speaker_amended: { label: "CORRECTION", cls: "text-accentSoft border-accent/40 bg-accent/10" },
 };

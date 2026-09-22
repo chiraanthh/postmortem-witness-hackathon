@@ -61,25 +61,25 @@ KNOWN: list[Known] = [
     Known("rule_out_provider", "status_change", 17, "status page is green",
           note="explicit, with a spoken reason"),
 
-    Known("confirmed_cause", "status_change", 43, "it was the deploy",
+    Known("confirmed_cause", "status_change", 45, "it was the deploy",
           note="explicit confirmation; shares its utterance with the revert"),
 
-    Known("dropped_thread_tls", "thread", 31, "certificate on the gateway",
+    Known("dropped_thread_tls", "thread", 33, "certificate on the gateway",
           note="nobody answers it, never revisited - the video cold open"),
 
-    Known("action_rollback", "action", 34, "roll back the deploy now",
+    Known("action_rollback", "action", 36, "roll back the deploy now",
           owner="Disha", note="speaker commits to it herself"),
-    Known("action_watch_error_rate", "action", 35, "watch the error rate",
+    Known("action_watch_error_rate", "action", 37, "watch the error rate",
           owner="Priya", note="speaker commits to it herself"),
-    Known("action_rate_limit", "action", 36, "check the rate limit configuration",
+    Known("action_rate_limit", "action", 38, "check the rate limit configuration",
           owner=UNOWNED, note="the one unowned action - 'someone needs to'"),
-    Known("action_status_update", "action", 37, "draft a status update",
+    Known("action_status_update", "action", 39, "draft a status update",
           owner="Rohan", note="assigned by name"),
-    Known("action_revert", "action", 43, "revert the retry change",
+    Known("action_revert", "action", 45, "revert the retry change",
           owner="Disha",
           note="second event in a status_change utterance; the one v1.2.0 ate"),
 
-    Known("resolution", "resolution", 47, "declaring this resolved",
+    Known("resolution", "resolution", 49, "declaring this resolved",
           note="explicit declaration, not just good news"),
 ]
 

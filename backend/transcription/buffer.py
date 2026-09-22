@@ -62,6 +62,10 @@ class Utterance:
     end_ms: int
     text: str
 
+    # Optional rewrite from the cleanup stage. Extraction may use this;
+    # grounding checks evidence_quote against BOTH text and cleaned_text.
+    cleaned_text: str | None = None
+
     # Hook for the roll-call pass that will map labels to real names. Nothing
     # populates this yet, deliberately.
     speaker_name: str | None = None

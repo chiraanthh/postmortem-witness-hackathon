@@ -128,7 +128,12 @@ def main(argv: list[str] | None = None) -> int:
                 entry = hypotheses.setdefault(ev.hypothesis_id, [ev.summary, "open"])
                 entry[1] = ev.new_state or entry[1]
             elif ev.type == "thread":
-                threads.append((f"th-{len(threads)}", ev.summary))
+                # thread_id is the event id — answers_thread_id must match exactly.
+                threads.append((ev.event_id, ev.summary or ev.text))
+            if ev.answers_thread_id:
+                threads = [
+                    t for t in threads if t[0] != ev.answers_thread_id
+                ]
 
         if (i + 1) % 25 == 0:
             print(f"  {i + 1}/{len(pairs)}  {worker.report()}", flush=True)

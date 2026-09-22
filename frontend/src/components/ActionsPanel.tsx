@@ -10,7 +10,7 @@ function ownerInitials(owner: string): string {
 }
 
 function ActionRow({ a }: { a: Action }) {
-  const unowned = !a.owner || a.owner.trim() === "";
+  const unowned = a.unowned;
   return (
     <li
       className={cx(
@@ -61,7 +61,7 @@ function ActionRow({ a }: { a: Action }) {
 }
 
 export function ActionsPanel({ actions }: { actions: Action[] }) {
-  const unowned = actions.filter((a) => !a.owner || a.owner.trim() === "").length;
+  const unowned = actions.filter((a) => a.unowned).length;
   return (
     <section id="actions" className="panel flex flex-col p-5">
       <div className="mb-1 flex items-center justify-between">

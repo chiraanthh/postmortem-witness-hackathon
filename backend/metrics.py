@@ -23,10 +23,11 @@ from backend.state.models import TurnKey
 
 # Stage names. Kept as constants so a typo cannot silently create a new,
 # permanently empty stage.
-ASR = "asr"           # audio sent -> unformatted final received
-FORMAT = "format"     # unformatted final -> formatted final, same turn
-EXTRACT = "extract"   # formatted final -> structured event (not yet wired)
-E2E = "e2e"           # audio sent -> structured event (not yet wired)
+ASR = "asr"           # audio sent -> formatted final (our config; see CLAUDE.md)
+FORMAT = "format"     # unformatted -> formatted gap when both phases arrive
+CLEANUP = "cleanup"   # optional qwen rewrite ahead of extraction
+EXTRACT = "extract"   # formatted final -> structured event
+E2E = "e2e"           # audio sent -> structured event
 
 
 def now_ms() -> float:

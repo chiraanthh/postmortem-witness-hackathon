@@ -5,9 +5,12 @@ import { TimelineItem } from "./TimelineItem";
 export function Timeline({
   rows,
   tick,
+  reconBeatAt,
 }: {
   rows: TimelineRow[];
   tick: number;
+  /** When set, amended rows rewrite speaker labels on a stagger. */
+  reconBeatAt?: number | null;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const count = rows.length;
@@ -18,6 +21,10 @@ export function Timeline({
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [count]);
+
+  const amendedOrder = rows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.amendedFrom != null && r.correctedAt != null);
 
   return (
     <section id="timeline" className="panel flex min-h-0 flex-col p-5">
@@ -44,9 +51,18 @@ export function Timeline({
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
-            {rows.map((row) => (
-              <TimelineItem key={row.turn_order} row={row} tick={tick} />
-            ))}
+            {rows.map((row) => {
+              const stagger = amendedOrder.findIndex(({ r }) => r.event_id === row.event_id);
+              return (
+                <TimelineItem
+                  key={row.event_id}
+                  row={row}
+                  tick={tick}
+                  reconBeatAt={reconBeatAt ?? null}
+                  staggerIndex={stagger >= 0 ? stagger : 0}
+                />
+              );
+            })}
           </ul>
         )}
       </div>

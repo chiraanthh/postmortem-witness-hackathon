@@ -66,17 +66,34 @@ SPEAKER_LABELS = True
 # which measurably helps on overlapping speech.
 MAX_SPEAKERS: int | None = None
 
-# Formatted finals are what we extract from. See "Known API behaviours" in
-# CLAUDE.md for why a turn finalizes twice.
+# Formatted finals are what we extract from. Docs describe a two-phase final;
+# our config only ever receives the formatted pass — see CLAUDE.md.
 FORMAT_TURNS = True
 
 
 # --- Extraction ------------------------------------------------------------
 
+# Which LLM backend runs extraction. Never silently fall over between them.
+#   anthropic           — Anthropic Messages API (default)
+#   assemblyai_gateway  — AssemblyAI LLM Gateway (OpenAI-compatible)
+EXTRACTION_PROVIDER = os.environ.get("EXTRACTION_PROVIDER", "anthropic").strip()
+
 # The model that turns an utterance into a structured event. Read from the
 # environment so it can be swapped with one variable and no code change - the
 # call site must never name a model literal.
 EXTRACTION_MODEL = os.environ.get("EXTRACTION_MODEL", "claude-haiku-4-5-20251001")
+
+# LLM Gateway region: "us" (default) or "eu".
+LLM_GATEWAY_REGION = os.environ.get("LLM_GATEWAY_REGION", "us").strip().lower()
+
+# Optional pre-extraction rewrite via qwen3.5-4b-32k-fast. Default OFF.
+CLEANUP_ENABLED = os.environ.get("CLEANUP_ENABLED", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+CLEANUP_MODEL = os.environ.get("CLEANUP_MODEL", "qwen3.5-4b-32k-fast")
 
 # The output is a handful of short fields. Anything larger is the model
 # rambling, and truncation is cheaper to detect than to read.
@@ -102,10 +119,85 @@ EXTRACTION_TIMEOUT_S = float(os.environ.get("EXTRACTION_TIMEOUT_S", "12"))
 EXTRACTION_MAX_HYPOTHESES = int(os.environ.get("EXTRACTION_MAX_HYPOTHESES", "12"))
 EXTRACTION_MAX_THREADS = int(os.environ.get("EXTRACTION_MAX_THREADS", "8"))
 
+# Concurrent live-pipeline seats (AssemblyAI + extraction). Replay/mock is
+# uncapped and never consumes a seat. Abandoned tabs free via idle timeout.
+LIVE_PIPELINE_CAP = int(os.environ.get("LIVE_PIPELINE_CAP", "2"))
+LIVE_SLOT_IDLE_TIMEOUT_S = float(os.environ.get("LIVE_SLOT_IDLE_TIMEOUT_S", "45"))
+
+# Runtime overrides from POST /incident/extraction (model picker). None means
+# "use the env defaults". Never clears mid-incident board state.
+_runtime_provider: str | None = None
+_runtime_model: str | None = None
+_runtime_cleanup: bool | None = None
+
+
+def extraction_provider() -> str:
+    if _runtime_provider is not None:
+        return _runtime_provider
+    return os.environ.get("EXTRACTION_PROVIDER", EXTRACTION_PROVIDER).strip()
+
 
 def extraction_model() -> str:
-    """Resolved at call time so tests and demos can override it in-process."""
+    if _runtime_model is not None:
+        return _runtime_model
     return os.environ.get("EXTRACTION_MODEL", EXTRACTION_MODEL)
+
+
+def cleanup_enabled() -> bool:
+    if _runtime_cleanup is not None:
+        return _runtime_cleanup
+    return os.environ.get("CLEANUP_ENABLED", "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def set_extraction_runtime(
+    *,
+    provider: str | None = None,
+    model: str | None = None,
+    cleanup: bool | None = None,
+) -> dict[str, object]:
+    """Apply model-picker changes to subsequent utterances only."""
+    global _runtime_provider, _runtime_model, _runtime_cleanup
+    if provider is not None:
+        _runtime_provider = provider.strip().lower()
+    if model is not None:
+        _runtime_model = model.strip()
+    if cleanup is not None:
+        _runtime_cleanup = bool(cleanup)
+    return extraction_runtime_status()
+
+
+def reset_extraction_runtime() -> dict[str, object]:
+    """Drop picker overrides so the next visitor inherits env defaults (Haiku).
+
+    Called on every fresh /incident/start and /incident/restart. Join-as-viewer
+    must not call this — that would yank the running host's selection.
+    """
+    global _runtime_provider, _runtime_model, _runtime_cleanup
+    _runtime_provider = None
+    _runtime_model = None
+    _runtime_cleanup = None
+    return extraction_runtime_status()
+
+
+def extraction_runtime_status() -> dict[str, object]:
+    return {
+        "provider": extraction_provider(),
+        "model": extraction_model(),
+        "cleanup_enabled": cleanup_enabled(),
+        "cleanup_model": CLEANUP_MODEL,
+        "gateway_region": LLM_GATEWAY_REGION,
+        "temperature": EXTRACTION_TEMPERATURE,
+        "defaults": {
+            "provider": EXTRACTION_PROVIDER,
+            "model": EXTRACTION_MODEL,
+            "cleanup_enabled": False,
+        },
+    }
 
 
 def assemblyai_api_key() -> str:
