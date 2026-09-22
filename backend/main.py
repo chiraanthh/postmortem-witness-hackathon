@@ -46,7 +46,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -61,7 +61,7 @@ from backend.sessions import SessionRegistry
 from backend.state.machine import IncidentMachine, StateDiff
 from backend.state.models import SCHEMA_VERSION, Event, TurnKey, load_schema
 from backend.transcription import audio
-from backend.transcription.audio import ControllableFileSource
+from backend.transcription.audio import AudioError, ControllableFileSource
 from backend.transcription.buffer import Amendment, Utterance
 from backend.transcription.stream import StreamConfig, TranscriptionStream
 
@@ -913,8 +913,16 @@ class LeaseBody(BaseModel):
     lease_id: str = Field(..., min_length=8)
 
 
+class TicketBody(BaseModel):
+    ticket_id: str = Field(..., min_length=8)
+
+
 class CreateSessionBody(BaseModel):
     kind: str = Field(default="live", description="live only — replay is client-side")
+    lease_id: str | None = Field(
+        default=None,
+        description="Optional reserved lease from the wait queue",
+    )
 
 
 def _session_hub(session_id: str):
@@ -951,7 +959,8 @@ def create_session(body: CreateSessionBody | None = None) -> dict[str, Any]:
             status_code=400,
             detail="only kind=live is server-backed; use recorded replay in the UI",
         )
-    session = registry.create_live()
+    reserved = body.lease_id if body else None
+    session = registry.create_live(lease_id=reserved)
     if session is None:
         status = live_slots.status()
         raise HTTPException(
@@ -971,6 +980,122 @@ def create_session(body: CreateSessionBody | None = None) -> dict[str, Any]:
     }
 
 
+@app.post("/sessions/upload")
+async def upload_and_start(file: UploadFile = File(...)) -> dict[str, Any]:
+    """Accept a call recording, normalise to 16 kHz mono PCM, start a live seat.
+
+    Limits (env-overridable): UPLOAD_MAX_BYTES (default 40 MiB),
+    UPLOAD_MAX_DURATION_MS (default 15 min).
+    """
+    session = registry.create_live(kind="upload")
+    if session is None:
+        status = live_slots.status()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "full": True,
+                "message": "live pipeline seats full",
+                **status,
+            },
+        )
+
+    config.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    upload_dir = config.UPLOAD_DIR / session.session_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    session.upload_dir = upload_dir
+
+    raw_name = Path(file.filename or "upload.bin").name
+    raw_path = upload_dir / f"raw_{raw_name}"
+    dest = upload_dir / "call.wav"
+
+    try:
+        size = 0
+        with raw_path.open("wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > config.UPLOAD_MAX_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"file too large ({size} bytes); "
+                            f"max is {config.UPLOAD_MAX_BYTES} bytes "
+                            f"({config.UPLOAD_MAX_BYTES // (1024 * 1024)} MiB)"
+                        ),
+                    )
+                out.write(chunk)
+        if size == 0:
+            raise HTTPException(status_code=400, detail="empty upload")
+
+        try:
+            duration_ms = audio.normalize_upload_to_wav(
+                raw_path,
+                dest,
+                max_duration_ms=config.UPLOAD_MAX_DURATION_MS,
+            )
+        except AudioError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        session.audio_path = dest
+        try:
+            started = session.hub.start(dest)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+        return {
+            "ok": True,
+            "session_id": session.session_id,
+            "lease_id": session.lease_id,
+            "kind": "upload",
+            "duration_ms": duration_ms,
+            "audio_url": f"/s/{session.session_id}/audio",
+            **live_slots.status(),
+            **started,
+        }
+    except HTTPException:
+        registry.drop(session.session_id)
+        raise
+    except Exception as exc:  # noqa: BLE001
+        registry.drop(session.session_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/media/demo/{name}")
+def demo_audio(name: str) -> FileResponse:
+    """Serve the scripted demo WAV for audible playback (replay + live demo)."""
+    if name != "incident_01.wav":
+        raise HTTPException(status_code=404, detail="unknown demo audio")
+    path = (config.REPO_ROOT / "demo" / "audio" / name).resolve()
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="demo audio missing")
+    return FileResponse(
+        path,
+        media_type="audio/wav",
+        filename=name,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/s/{session_id}/audio")
+def session_audio(session_id: str) -> FileResponse:
+    """Serve the WAV this session's pipeline is consuming."""
+    session = _session_hub(session_id)
+    path = session.audio_path
+    if path is None:
+        with session.hub._lock:
+            path = session.hub._file
+    if path is None or not Path(path).is_file():
+        raise HTTPException(status_code=404, detail="no audio for session")
+    return FileResponse(
+        Path(path),
+        media_type="audio/wav",
+        filename=Path(path).name,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @app.post("/live/acquire")
 def acquire_live_slot() -> dict[str, Any]:
     """Back-compat alias: creates a live /s/<id> session."""
@@ -979,6 +1104,7 @@ def acquire_live_slot() -> dict[str, Any]:
 
 @app.post("/live/heartbeat")
 def heartbeat_live_slot(body: LeaseBody) -> dict[str, Any]:
+    registry.sweep_expired()
     if not live_slots.heartbeat(body.lease_id):
         raise HTTPException(status_code=404, detail="unknown or expired lease")
     return {"ok": True, **live_slots.status()}
@@ -1003,6 +1129,49 @@ def release_live_slot(body: LeaseBody) -> dict[str, Any]:
     return {"ok": True, **live_slots.status()}
 
 
+@app.post("/live/queue")
+def join_live_queue() -> dict[str, Any]:
+    """FIFO waitlist when live seats are full. Heartbeat the ticket to stay in line."""
+    return {"ok": True, **live_slots.enqueue()}
+
+
+@app.post("/live/queue/heartbeat")
+def heartbeat_live_queue(body: TicketBody) -> dict[str, Any]:
+    registry.sweep_expired()
+    status = live_slots.queue_heartbeat(body.ticket_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="unknown or expired ticket")
+    return {"ok": True, **status}
+
+
+@app.post("/live/queue/claim")
+def claim_live_queue(body: TicketBody) -> dict[str, Any]:
+    """Promote a ready ticket into a live /s/<id> session."""
+    lease_id = live_slots.claim_ready(body.ticket_id)
+    if lease_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="ticket not ready — keep heartbeating",
+        )
+    session = registry.create_live(lease_id=lease_id)
+    if session is None:
+        live_slots.release(lease_id)
+        raise HTTPException(status_code=503, detail="could not bind reserved seat")
+    return {
+        "ok": True,
+        "session_id": session.session_id,
+        "lease_id": session.lease_id,
+        "kind": session.kind,
+        **live_slots.status(),
+    }
+
+
+@app.post("/live/queue/leave")
+def leave_live_queue(body: TicketBody) -> dict[str, Any]:
+    live_slots.dequeue(body.ticket_id)
+    return {"ok": True, **live_slots.status()}
+
+
 @app.delete("/s/{session_id}")
 def delete_session(session_id: str) -> dict[str, Any]:
     if not registry.drop(session_id):
@@ -1023,11 +1192,13 @@ def start_session_incident(session_id: str, body: StartBody) -> dict[str, Any]:
     if not path.is_absolute():
         path = (config.REPO_ROOT / path).resolve()
     try:
-        return session.hub.start(path)
+        result = session.hub.start(path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    session.audio_path = path
+    return result
 
 
 @app.post("/s/{session_id}/incident/pause")

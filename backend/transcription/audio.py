@@ -130,6 +130,77 @@ def _raw_pcm_from_file(path: Path) -> Iterator[bytes]:
             raise AudioError(f"ffmpeg failed decoding {path.name}: {stderr.strip()}")
 
 
+def normalize_upload_to_wav(
+    src: Path,
+    dest: Path,
+    *,
+    max_duration_ms: int,
+) -> int:
+    """Transcode any ffmpeg-readable audio to 16 kHz mono 16-bit PCM WAV.
+
+    Returns duration_ms of the written file. Raises AudioError on failure /
+    over-duration. `dest` parent must exist.
+    """
+    if _is_already_normalized(src):
+        duration = probe_duration_ms(src)
+        if duration is None:
+            raise AudioError("could not probe audio duration")
+        if duration > max_duration_ms:
+            raise AudioError(
+                f"audio too long ({duration / 1000:.0f}s); "
+                f"max is {max_duration_ms / 1000:.0f}s"
+            )
+        dest.write_bytes(src.read_bytes())
+        return duration
+
+    _require_ffmpeg("to normalise uploaded audio")
+    # Probe first so we can reject long files before a huge transcode.
+    probed = probe_duration_ms(src)
+    if probed is not None and probed > max_duration_ms:
+        raise AudioError(
+            f"audio too long ({probed / 1000:.0f}s); "
+            f"max is {max_duration_ms / 1000:.0f}s"
+        )
+
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(src),
+        "-ac",
+        str(CHANNELS),
+        "-ar",
+        str(SAMPLE_RATE),
+        "-c:a",
+        "pcm_s16le",
+        str(dest),
+    ]
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=120, check=False
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AudioError("ffmpeg timed out normalising upload") from exc
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "unknown ffmpeg error").strip()
+        raise AudioError(f"not a usable audio file: {err[:240]}")
+    if not dest.is_file() or dest.stat().st_size < 44:
+        raise AudioError("normalisation produced an empty file")
+    duration = probe_duration_ms(dest)
+    if duration is None:
+        raise AudioError("could not probe normalised duration")
+    if duration > max_duration_ms:
+        dest.unlink(missing_ok=True)
+        raise AudioError(
+            f"audio too long ({duration / 1000:.0f}s); "
+            f"max is {max_duration_ms / 1000:.0f}s"
+        )
+    return duration
+
+
 def _raw_pcm_from_mic(device: str) -> Iterator[bytes]:
     """Yield raw PCM blocks captured live from the system microphone."""
     _require_ffmpeg("to capture the microphone")

@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CONTRACT_VERSION } from "../contract";
 import {
+  claimLiveQueue,
   createLiveSession,
   fetchHealth,
+  heartbeatLiveQueue,
+  joinLiveQueue,
+  leaveLiveQueue,
+  startLiveIncident,
   type Health,
   type LivePipelineStatus,
-  startLiveIncident,
 } from "../lib/api";
 
 /**
@@ -15,14 +19,19 @@ import {
 export function Portal({
   onEnterLive,
   onEnterReplay,
+  onEnterUpload,
 }: {
   onEnterLive: (sessionId: string, leaseId: string) => void;
   onEnterReplay: () => void;
+  onEnterUpload: () => void;
 }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullHint, setFullHint] = useState(false);
+  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [queuePos, setQueuePos] = useState<number | null>(null);
+  const claimingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     const h = await fetchHealth();
@@ -35,10 +44,65 @@ export function Portal({
     return () => window.clearInterval(id);
   }, [refresh]);
 
+  // Wait-queue heartbeat + auto-claim when a seat is reserved.
+  useEffect(() => {
+    if (!ticketId) return;
+    let cancelled = false;
+    const tick = async () => {
+      const st = await heartbeatLiveQueue(ticketId);
+      if (cancelled) return;
+      if (st == null) {
+        setTicketId(null);
+        setQueuePos(null);
+        setError("Wait-queue ticket expired — join again if seats are still full.");
+        return;
+      }
+      setQueuePos(st.position > 0 ? st.position : 1);
+      if (st.ready && !claimingRef.current) {
+        claimingRef.current = true;
+        try {
+          const seat = await claimLiveQueue(ticketId);
+          if (cancelled) return;
+          setTicketId(null);
+          setQueuePos(null);
+          const res = await startLiveIncident(seat.session_id, seat.lease_id);
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `start failed (${res.status})`);
+          }
+          onEnterLive(seat.session_id, seat.lease_id);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err));
+          setTicketId(null);
+          setQueuePos(null);
+        } finally {
+          claimingRef.current = false;
+        }
+      }
+    };
+    void tick();
+    const id = window.setInterval(() => void tick(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [ticketId, onEnterLive]);
+
+  // Leave queue only on portal unmount, not when ticket clears after claim.
+  const ticketRef = useRef<string | null>(null);
+  ticketRef.current = ticketId;
+  useEffect(() => {
+    return () => {
+      const tid = ticketRef.current;
+      if (tid) void leaveLiveQueue(tid);
+    };
+  }, []);
+
   const slots: LivePipelineStatus = health?.live_pipeline ?? {
     used: 0,
     cap: 2,
     available: 2,
+    queue_depth: 0,
   };
   const full = slots.available <= 0 || fullHint;
   const running = Boolean(
@@ -66,6 +130,27 @@ export function Portal({
         throw new Error(text || `start failed (${res.status})`);
       }
       onEnterLive(seat.session_id, seat.lease_id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const joinQueue = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const q = await joinLiveQueue();
+      setTicketId(q.ticket_id);
+      setQueuePos(q.position);
+      setHealth((h) =>
+        h ? { ...h, live_pipeline: q.status } : { live_pipeline: q.status }
+      );
+      if (q.ready && q.lease_id) {
+        // Effect will claim on next heartbeat tick; nudge immediately.
+        claimingRef.current = false;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -107,15 +192,52 @@ export function Portal({
           </p>
         </div>
 
-        {full ? (
+        {ticketId ? (
+          <div className="flex flex-col gap-4 rounded-2xl border border-line bg-panel/80 p-5">
+            <p className="text-[13px] font-medium text-ink">
+              You are #{queuePos ?? "…"} in the live-seat wait queue
+              {typeof slots.queue_depth === "number"
+                ? ` (${slots.queue_depth} waiting)`
+                : ""}
+              .
+            </p>
+            <p className="text-[13px] text-inkMute">
+              Keep this tab open. When a seat frees (run ends, leave, or 45s
+              idle), you will be started automatically. Or watch the recorded
+              run now — it does not use a live seat.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="pill-btn border border-accent/40 bg-accent/15 text-accentSoft hover:border-accent"
+                onClick={onEnterReplay}
+              >
+                Recorded run of the live pipeline
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="pill-btn border border-line2 bg-raised/70 text-ink"
+                onClick={() => {
+                  if (ticketId) void leaveLiveQueue(ticketId);
+                  setTicketId(null);
+                  setQueuePos(null);
+                }}
+              >
+                Leave queue
+              </button>
+            </div>
+          </div>
+        ) : full ? (
           <div className="flex flex-col gap-4 rounded-2xl border border-line bg-panel/80 p-5">
             <p className="text-[13px] font-medium text-ink">
               Live pipeline seats are full ({slots.used} of {slots.cap} in
               use).
             </p>
             <p className="text-[13px] text-inkMute">
-              Try again in a few minutes, or watch the recorded run of the
-              live pipeline now — same board, no live ASR seat required.
+              Join the wait queue, try again in a few minutes, or watch the
+              recorded run of the live pipeline now — same board, no live ASR
+              seat required.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -125,6 +247,22 @@ export function Portal({
                 onClick={onEnterReplay}
               >
                 Recorded run of the live pipeline
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="pill-btn border border-line2 bg-raised/70 text-ink hover:border-accent/40"
+                onClick={() => void joinQueue()}
+              >
+                Join wait queue
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="pill-btn border border-line2 bg-raised/70 text-ink hover:border-accent/40"
+                onClick={onEnterUpload}
+              >
+                Upload your own call
               </button>
               <button
                 type="button"
@@ -143,6 +281,9 @@ export function Portal({
           <div className="flex flex-col gap-3">
             <p className="text-[12px] text-inkFaint">
               Live pipeline: {slots.used} of {slots.cap} in use
+              {typeof slots.queue_depth === "number" && slots.queue_depth > 0
+                ? ` · ${slots.queue_depth} waiting`
+                : ""}
               {running ? " · a session is running (you will join as viewer)" : ""}
             </p>
             <div className="flex flex-wrap items-center gap-3">
@@ -161,6 +302,14 @@ export function Portal({
                 onClick={onEnterReplay}
               >
                 Recorded run of the live pipeline
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="pill-btn border border-line2 bg-raised/70 text-ink hover:border-accent/40"
+                onClick={onEnterUpload}
+              >
+                Upload your own call
               </button>
             </div>
           </div>

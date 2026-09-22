@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIncident, type SessionMode } from "./state/useIncident";
 import {
   selectTimeline,
@@ -20,16 +20,33 @@ import { LatencyOverlay } from "./components/LatencyOverlay";
 import { RefusalPanel } from "./components/RefusalPanel";
 import { PlaybackBar } from "./components/PlaybackBar";
 import { Portal } from "./components/Portal";
+import { UploadPage } from "./components/UploadPage";
+import { SessionAudio } from "./components/SessionAudio";
 import {
   ReconciliationBeat,
   useReconciliationDim,
 } from "./components/ReconciliationBeat";
 import { cx } from "./lib/cx";
+import { apiBase } from "./lib/api";
+import {
+  portalReplaySpeed,
+  REPLAY_AUDIO_URL,
+} from "./replay/emitter";
+
+type PortalView = "home" | "upload";
 
 export default function App() {
+  const [portalView, setPortalView] = useState<PortalView>("home");
   const [mode, setMode] = useState<SessionMode>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [leaseId, setLeaseId] = useState<string | null>(null);
+  const [audioArmed, setAudioArmed] = useState(false);
+  const [livePaused, setLivePaused] = useState(false);
+  const [livePosMs, setLivePosMs] = useState(0);
+  const replayOriginRef = useRef(0);
+  const replayStartWallRef = useRef(0);
+  const replaySpeed = portalReplaySpeed();
+
   const { state, tick, replay } = useIncident(mode, sessionId, leaseId);
 
   const timeline = useMemo(() => selectTimeline(state), [state]);
@@ -53,21 +70,68 @@ export default function App() {
     setMode(null);
     setSessionId(null);
     setLeaseId(null);
+    setAudioArmed(false);
+    setPortalView("home");
   };
 
+  // Replay: arm audio on the portal click (above); keep wall clock for drift.
+  useEffect(() => {
+    if (mode !== "replay") return;
+    replayStartWallRef.current = performance.now();
+    replayOriginRef.current = 0;
+  }, [mode]);
+
+  const getTargetMs = useCallback((): number | null => {
+    if (mode === "live" || mode === "replay") {
+      if (mode === "live") return livePosMs;
+      // Prefer board clock (incident audio time). Fall back to wall*speed.
+      if (state.clock_ms > 0) return state.clock_ms;
+      const elapsed = performance.now() - replayStartWallRef.current;
+      return replayOriginRef.current + elapsed * replaySpeed;
+    }
+    return null;
+  }, [mode, livePosMs, state.clock_ms, replaySpeed]);
+
+  const audioSrc =
+    mode === "replay"
+      ? `${apiBase()}${REPLAY_AUDIO_URL}`
+      : sessionId
+        ? `${apiBase()}/s/${sessionId}/audio`
+        : null;
+
+  const sessionKey =
+    mode === "replay" ? "replay" : sessionId ? `s:${sessionId}` : "none";
+
   if (mode === null) {
+    if (portalView === "upload") {
+      return (
+        <UploadPage
+          onCancel={() => setPortalView("home")}
+          onStarted={(sid, lid) => {
+            setSessionId(sid);
+            setLeaseId(lid);
+            setAudioArmed(true);
+            setMode("live");
+          }}
+        />
+      );
+    }
     return (
       <Portal
         onEnterLive={(sid, lid) => {
           setSessionId(sid);
           setLeaseId(lid);
+          setAudioArmed(true);
           setMode("live");
         }}
         onEnterReplay={() => {
           setSessionId(null);
           setLeaseId(null);
+          setAudioArmed(true);
+          replayStartWallRef.current = performance.now();
           setMode("replay");
         }}
+        onEnterUpload={() => setPortalView("upload")}
       />
     );
   }
@@ -78,7 +142,12 @@ export default function App() {
         incidentId={state.incident_id}
         status={stats.status}
         clockMs={state.clock_ms}
-        onReplay={replay}
+        onReplay={() => {
+          replay();
+          if (mode === "replay") {
+            replayStartWallRef.current = performance.now();
+          }
+        }}
         onLeave={leave}
         sessionLabel={
           mode === "replay"
@@ -88,6 +157,16 @@ export default function App() {
               : "live"
         }
         sessionId={sessionId}
+        audio={
+          <SessionAudio
+            src={audioSrc}
+            sessionKey={sessionKey}
+            getTargetMs={getTargetMs}
+            paused={mode === "live" ? livePaused : false}
+            playbackRate={mode === "replay" ? replaySpeed : 1}
+            armed={audioArmed}
+          />
+        }
       />
 
       <ReconciliationBeat
@@ -139,6 +218,14 @@ export default function App() {
             onRestartTransport={replay}
             sessionId={sessionId}
             leaseId={leaseId}
+            onPlaybackMeta={(meta) => {
+              if (typeof meta.playback_position_ms === "number") {
+                setLivePosMs(meta.playback_position_ms);
+              }
+              if (typeof meta.paused === "boolean") {
+                setLivePaused(meta.paused);
+              }
+            }}
           />
         )}
 

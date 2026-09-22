@@ -124,6 +124,11 @@ EXTRACTION_MAX_THREADS = int(os.environ.get("EXTRACTION_MAX_THREADS", "8"))
 LIVE_PIPELINE_CAP = int(os.environ.get("LIVE_PIPELINE_CAP", "2"))
 LIVE_SLOT_IDLE_TIMEOUT_S = float(os.environ.get("LIVE_SLOT_IDLE_TIMEOUT_S", "45"))
 
+# Upload caps (raw upload bytes / duration after probe).
+UPLOAD_MAX_BYTES = int(os.environ.get("UPLOAD_MAX_BYTES", str(40 * 1024 * 1024)))  # 40 MiB
+UPLOAD_MAX_DURATION_MS = int(os.environ.get("UPLOAD_MAX_DURATION_MS", str(15 * 60 * 1000)))  # 15 min
+UPLOAD_DIR = REPO_ROOT / ".uploads"
+
 # Runtime overrides from POST /incident/extraction (model picker). None means
 # "use the env defaults". Never clears mid-incident board state.
 _runtime_provider: str | None = None

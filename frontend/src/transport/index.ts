@@ -259,7 +259,10 @@ export function startTransport(
     sessionId?: string | null;
   }
 ): Transport {
-  const speed = Number(import.meta.env.VITE_MOCK_SPEED ?? "1") || 1;
+  const speed =
+    opts?.forceReplay === true
+      ? Number(import.meta.env.VITE_REPLAY_SPEED ?? "4") || 4
+      : Number(import.meta.env.VITE_MOCK_SPEED ?? "1") || 1;
 
   if (opts?.forceReplay === true) {
     const controller = startReplayEmitter(dispatch, speed);

@@ -11,6 +11,7 @@ demo/audio/*.wav
 # 6MB of base64 and the run dirs are raw protocol logs.
 demo/audio/.tts_cache/
 demo/runs/
+.uploads/
 .DS_Store
 .pytest_cache/
 *.egg-info/

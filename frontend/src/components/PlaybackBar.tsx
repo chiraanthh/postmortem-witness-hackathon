@@ -24,10 +24,12 @@ export function PlaybackBar({
   onRestartTransport,
   sessionId,
   leaseId,
+  onPlaybackMeta,
 }: {
   onRestartTransport: () => void;
   sessionId: string;
   leaseId: string | null;
+  onPlaybackMeta?: (meta: Health) => void;
 }) {
   const [health, setHealth] = useState<Health>({});
   const [busy, setBusy] = useState(false);
@@ -62,19 +64,21 @@ export function PlaybackBar({
         status !== undefined &&
         status !== "idle" &&
         status !== "error";
-      setHealth({
+      const next: Health = {
         status,
         running,
         finished,
         paused,
         playback_position_ms: position,
         playback_duration_ms: duration,
-      });
+      };
+      setHealth(next);
       setSeekMs(position);
+      onPlaybackMeta?.(next);
     } catch {
       /* ignore poll errors */
     }
-  }, [sessionId]);
+  }, [sessionId, onPlaybackMeta]);
 
   useEffect(() => {
     void refresh();

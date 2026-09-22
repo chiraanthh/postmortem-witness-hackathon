@@ -1,4 +1,4 @@
-"""Offline tests for live-pipeline seat leases."""
+"""Offline tests for live-pipeline seat leases and wait queue."""
 
 from __future__ import annotations
 
@@ -26,7 +26,10 @@ class TestLiveSlotManager(unittest.TestCase):
         self.assertIsNotNone(a)
         self.assertIsNotNone(b)
         self.assertIsNone(m.acquire())
-        self.assertEqual(m.status(), {"used": 2, "cap": 2, "available": 0})
+        self.assertEqual(
+            m.status(),
+            {"used": 2, "cap": 2, "available": 0, "queue_depth": 0},
+        )
 
     def test_release_frees_seat(self) -> None:
         m = LiveSlotManager(cap=2, idle_timeout_s=60)
@@ -77,6 +80,36 @@ class TestLiveSlotManager(unittest.TestCase):
         self.assertEqual(m.release_all(), 2)
         self.assertEqual(m.status()["used"], 0)
         self.assertIsNotNone(m.acquire())
+
+    def test_wait_queue_promotes_on_release(self) -> None:
+        m = LiveSlotManager(cap=1, idle_timeout_s=60)
+        held = m.acquire()
+        self.assertIsNotNone(held)
+        ticket = m.enqueue()
+        self.assertFalse(ticket["ready"])
+        self.assertEqual(ticket["position"], 1)
+        self.assertEqual(m.status()["queue_depth"], 1)
+
+        self.assertTrue(m.release(held or ""))
+        beat = m.queue_heartbeat(str(ticket["ticket_id"]))
+        assert beat is not None
+        self.assertTrue(beat["ready"])
+        self.assertIsNotNone(beat["lease_id"])
+
+        claimed = m.claim_ready(str(ticket["ticket_id"]))
+        self.assertEqual(claimed, beat["lease_id"])
+        self.assertTrue(m.has(claimed or ""))
+        self.assertEqual(m.status()["queue_depth"], 0)
+
+    def test_waiter_idle_timeout_drops_ticket(self) -> None:
+        clock = FakeClock()
+        m = LiveSlotManager(cap=1, idle_timeout_s=45.0, clock=clock)
+        m.acquire()
+        ticket = m.enqueue()
+        tid = str(ticket["ticket_id"])
+        clock.advance(50)
+        self.assertIsNone(m.queue_heartbeat(tid))
+        self.assertEqual(m.status()["queue_depth"], 0)
 
 
 if __name__ == "__main__":

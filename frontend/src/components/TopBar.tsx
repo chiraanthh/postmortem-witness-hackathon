@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { IncidentStats } from "../state/selectors";
 import { CONTRACT_VERSION } from "../contract";
 import { formatClock } from "../lib/time";
@@ -19,6 +20,7 @@ export function TopBar({
   onLeave,
   sessionLabel,
   sessionId,
+  audio,
 }: {
   incidentId: string;
   status: IncidentStats["status"];
@@ -27,6 +29,7 @@ export function TopBar({
   onLeave?: () => void;
   sessionLabel?: string;
   sessionId?: string | null;
+  audio?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur-xl">
@@ -70,6 +73,7 @@ export function TopBar({
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-2.5 md:ml-0">
+          {audio}
           <ModelPicker sessionId={sessionId ?? null} />
           <StatusPill status={status} />
           <div className="hidden items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 sm:flex">
