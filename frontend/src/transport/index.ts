@@ -11,6 +11,8 @@ import {
 export interface Transport {
   incidentId: string;
   stop: () => void;
+  setReplaySpeed?: (speed: number) => void;
+  jumpToReconciliation?: () => void;
 }
 
 type WireEnvelope =
@@ -257,16 +259,24 @@ export function startTransport(
     forceReplay?: boolean;
     forceMock?: boolean;
     sessionId?: string | null;
+    replaySpeed?: number;
   }
 ): Transport {
   const speed =
     opts?.forceReplay === true
-      ? Number(import.meta.env.VITE_REPLAY_SPEED ?? "4") || 4
+      ? opts.replaySpeed && opts.replaySpeed > 0
+        ? opts.replaySpeed
+        : Number(import.meta.env.VITE_REPLAY_SPEED ?? "1") || 1
       : Number(import.meta.env.VITE_MOCK_SPEED ?? "1") || 1;
 
   if (opts?.forceReplay === true) {
     const controller = startReplayEmitter(dispatch, speed);
-    return { incidentId: REPLAY_INCIDENT_ID, stop: controller.stop };
+    return {
+      incidentId: REPLAY_INCIDENT_ID,
+      stop: controller.stop,
+      setReplaySpeed: controller.setSpeed,
+      jumpToReconciliation: controller.jumpToReconciliation,
+    };
   }
 
   // Hand mock is a FE-dev flag only. Portal never sets forceMock.

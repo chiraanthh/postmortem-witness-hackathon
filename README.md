@@ -140,8 +140,12 @@ python -m backend.tools.spike_run --file demo/audio/incident_01.wav \
 - Streaming diarization exists on Universal Streaming v3
   (`speaker_labels=true`).
 - `SpeakerRevision` items arrived as **one message at session teardown**
-  (e.g. 18 items / 13 label changes on `incident_01_v15b`), not live —
-  that drove the reconciliation design.
+  (e.g. 18 items / **13 label changes** on `incident_01_v15b` ASR stream),
+  not live — that drove the reconciliation design. Only turns that
+  produced **board events** are rewritten: the recorded-run fixture’s
+  `reconciliation` DiffOp reports **`events_touched: 5`** (five speaker
+  label flips on the timeline, matching the banner). The 13 is an ASR
+  turn-level count; the 5 is the board-level count judges see.
 - `turn_order` and word timestamps **reset on reconnect** → every join
   key carries `connection_epoch`.
 - With `format_turns=true`, the documented unformatted-then-formatted

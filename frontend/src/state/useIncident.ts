@@ -20,7 +20,8 @@ export type SessionMode = "live" | "replay" | null;
 export function useIncident(
   mode: SessionMode,
   sessionId: string | null,
-  leaseId: string | null
+  leaseId: string | null,
+  replaySpeed = 1
 ) {
   const [state, dispatch] = useReducer(
     dashboardReducer,
@@ -30,6 +31,8 @@ export function useIncident(
   const [tick, setTick] = useState(() => Date.now());
   const [runId, setRunId] = useState(0);
   const transportRef = useRef<Transport | null>(null);
+  const speedRef = useRef(replaySpeed);
+  speedRef.current = replaySpeed;
 
   const active = mode !== null;
 
@@ -48,13 +51,22 @@ export function useIncident(
       forceReplay: mode === "replay",
       // Hand-authored mock is VITE_MOCK-only (dev). Portal replay never uses it.
       sessionId: mode === "live" ? sessionId : null,
+      replaySpeed: speedRef.current,
     });
     transportRef.current = transport;
     return () => {
       transport.stop();
       transportRef.current = null;
     };
+    // replaySpeed changes call setReplaySpeed on the live controller — do not
+    // remount (that would RESET the board).
   }, [runId, active, mode, sessionId]);
+
+  // Push speed into the running replay emitter without resetting state.
+  useEffect(() => {
+    if (mode !== "replay") return;
+    transportRef.current?.setReplaySpeed?.(replaySpeed);
+  }, [mode, replaySpeed]);
 
   // Live seat heartbeat + release on leave / unload.
   useEffect(() => {
@@ -97,5 +109,9 @@ export function useIncident(
 
   const replay = useCallback(() => setRunId((n) => n + 1), []);
 
-  return { state, tick, replay };
+  const jumpToReconciliation = useCallback(() => {
+    transportRef.current?.jumpToReconciliation?.();
+  }, []);
+
+  return { state, tick, replay, jumpToReconciliation };
 }

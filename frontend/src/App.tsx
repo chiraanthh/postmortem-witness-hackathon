@@ -22,6 +22,7 @@ import { PlaybackBar } from "./components/PlaybackBar";
 import { Portal } from "./components/Portal";
 import { UploadPage } from "./components/UploadPage";
 import { SessionAudio } from "./components/SessionAudio";
+import { ReplayControls } from "./components/ReplayControls";
 import {
   ReconciliationBeat,
   useReconciliationDim,
@@ -31,6 +32,7 @@ import { apiBase } from "./lib/api";
 import {
   portalReplaySpeed,
   REPLAY_AUDIO_URL,
+  type ReplaySpeed,
 } from "./replay/emitter";
 
 type PortalView = "home" | "upload";
@@ -43,11 +45,20 @@ export default function App() {
   const [audioArmed, setAudioArmed] = useState(false);
   const [livePaused, setLivePaused] = useState(false);
   const [livePosMs, setLivePosMs] = useState(0);
+  const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(() => {
+    const n = portalReplaySpeed();
+    if (n === 2 || n === 4) return n;
+    return 1;
+  });
   const replayOriginRef = useRef(0);
   const replayStartWallRef = useRef(0);
-  const replaySpeed = portalReplaySpeed();
 
-  const { state, tick, replay } = useIncident(mode, sessionId, leaseId);
+  const { state, tick, replay, jumpToReconciliation } = useIncident(
+    mode,
+    sessionId,
+    leaseId,
+    replaySpeed
+  );
 
   const timeline = useMemo(() => selectTimeline(state), [state]);
   const columns = useMemo(() => selectHypothesesByState(state), [state]);
@@ -167,6 +178,15 @@ export default function App() {
             armed={audioArmed}
           />
         }
+        replayControls={
+          mode === "replay" ? (
+            <ReplayControls
+              speed={replaySpeed}
+              onSpeed={setReplaySpeed}
+              onJumpReconciliation={jumpToReconciliation}
+            />
+          ) : null
+        }
       />
 
       <ReconciliationBeat
@@ -261,7 +281,10 @@ export default function App() {
         </footer>
       </main>
 
-      <LatencyOverlay latency={state.latency} />
+      <LatencyOverlay
+        latency={state.latency}
+        source={mode === "replay" ? "recorded" : "live"}
+      />
     </div>
   );
 }

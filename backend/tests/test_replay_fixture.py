@@ -69,6 +69,12 @@ class TestReplayFixture(unittest.TestCase):
         self.assertIsNotNone(recon)
         self.assertEqual(recon["events_touched"], 5)
         self.assertEqual(len(recon["speakers"]), 5)
+        # events_touched == board rewrites. ASR on the same audio can report
+        # more turn-level label changes (e.g. 13 on incident_01_v15b); those
+        # include turns that never became board events.
+        # events_touched == board rewrites. ASR on the same audio can report
+        # more turn-level label changes (e.g. 13 on incident_01_v15b); those
+        # include turns that never became board events.
 
 
 if __name__ == "__main__":

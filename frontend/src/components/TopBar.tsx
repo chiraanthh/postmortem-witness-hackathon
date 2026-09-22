@@ -21,6 +21,7 @@ export function TopBar({
   sessionLabel,
   sessionId,
   audio,
+  replayControls,
 }: {
   incidentId: string;
   status: IncidentStats["status"];
@@ -30,6 +31,7 @@ export function TopBar({
   sessionLabel?: string;
   sessionId?: string | null;
   audio?: ReactNode;
+  replayControls?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur-xl">
@@ -74,6 +76,7 @@ export function TopBar({
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-2.5 md:ml-0">
           {audio}
+          {replayControls}
           <ModelPicker sessionId={sessionId ?? null} />
           <StatusPill status={status} />
           <div className="hidden items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 sm:flex">

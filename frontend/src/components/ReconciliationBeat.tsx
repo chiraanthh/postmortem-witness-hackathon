@@ -47,9 +47,13 @@ export function ReconciliationBeat({
           Speaker attributions reconciled
         </p>
         <p className="mt-1 text-center text-[13px] text-ink">
-          {n === 0
-            ? "No speaker labels moved."
-            : `${n} attribution${n === 1 ? "" : "s"} corrected across the timeline.`}
+          {summary.events_touched === 0
+            ? "No board events needed a speaker rewrite."
+            : `${summary.events_touched} board event${
+                summary.events_touched === 1 ? "" : "s"
+              } re-attributed (${summary.speakers.length} speaker label${
+                summary.speakers.length === 1 ? "" : "s"
+              }).`}
         </p>
         {n > 0 && (
           <ul className="mt-2 flex flex-wrap justify-center gap-1.5">
