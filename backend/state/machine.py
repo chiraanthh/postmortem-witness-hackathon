@@ -556,7 +556,9 @@ class IncidentMachine:
         batch arrives at teardown - after the call was declared resolved.
         """
         if event.type == EventType.NOISE.value:
-            return StateDiff()
+            # Noise is not board content, but it may still answer an open
+            # thread (e.g. "status page is green" → answers_thread_id).
+            return self._maybe_answer_thread(event)
 
         if self.frozen and event.type != EventType.SPEAKER_AMENDED.value:
             return StateDiff()

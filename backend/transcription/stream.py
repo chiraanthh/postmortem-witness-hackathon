@@ -114,10 +114,10 @@ class StreamConfig:
             "speaker_labels": self.speaker_labels,
             "max_speakers": self.max_speakers,
             # Prefer short replies as separate turns so "Yeah, on it." / "Will
-            # do." do not merge under one speaker label.
-            "end_of_turn_confidence_threshold": 0.4,
-            "min_end_of_turn_silence_when_confident": 160,
-            "min_turn_silence": 100,
+            # do." do not merge under one speaker label — but keep enough silence
+            # that a full sentence ("status page is green…") is not chopped.
+            "end_of_turn_confidence_threshold": 0.5,
+            "min_turn_silence": 280,
         }
         if self.keyterms:
             kwargs["keyterms_prompt"] = list(self.keyterms)

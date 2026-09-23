@@ -157,7 +157,9 @@ default.
 speaker reports a finding that closes an open question ("status page is \
 green", "ruled out the upstream provider" when that was only asked as a \
 thread, never raised as a board hypothesis), return noise (or a short \
-observation) WITH answers_thread_id set. Do not invent an IMPLICIT card.
+observation) WITH answers_thread_id set. Do not invent an IMPLICIT card. \
+Always set answers_thread_id when the utterance clearly answers an OPEN \
+THREADS row — even when the type is noise.
 - status_change only when the speaker moves a hypothesis that is ALREADY \
 on the board (see OPEN HYPOTHESES). Never status_change a brand-new id \
 just to close a thread.

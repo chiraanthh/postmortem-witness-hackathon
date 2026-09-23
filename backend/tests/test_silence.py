@@ -114,6 +114,35 @@ class TestAnswersThreadId(unittest.TestCase):
             o.op == "upsert_thread" and o.key == asked.event_id for o in diff.ops
         ))
 
+    def test_noise_with_answers_thread_id_still_closes_thread(self):
+        """Noise is not board content but may answer an open question."""
+        m = IncidentMachine(incident_id="inc")
+        asked = event(
+            "thread",
+            summary="Check payment provider status page",
+            text="Should we check the payment provider status page?",
+            speaker="A",
+            order=1,
+            ts=10_000,
+        )
+        m.apply(asked)
+        reply = event(
+            "noise",
+            summary="",
+            text="And the provider status page is green. It's not upstream.",
+            speaker="C",
+            order=2,
+            ts=25_000,
+            answers_thread_id=asked.event_id,
+        )
+        diff = m.apply(reply)
+        thread = m.threads[asked.event_id]
+        self.assertTrue(thread.answered)
+        self.assertTrue(thread.closed)
+        self.assertTrue(any(
+            o.op == "upsert_thread" and o.key == asked.event_id for o in diff.ops
+        ))
+
     def test_proximity_without_link_does_not_answer(self):
         m = IncidentMachine(incident_id="inc")
         asked = event(
