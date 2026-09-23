@@ -109,6 +109,25 @@ export interface DashboardState {
   clock_ms: number;
   /** How many wire messages / ops have been ingested — a liveness counter. */
   ingested: number;
+
+  /** Live pipeline transport cursor (from WS `playback`, not HTTP poll). */
+  playback: {
+    position_ms: number;
+    duration_ms: number;
+    paused: boolean;
+    status: string;
+    running: boolean;
+    finished: boolean;
+  };
+  /** True while the live WebSocket is open. */
+  wsConnected: boolean;
+  /** Live ASR partial caption (one line). */
+  partialCaption: {
+    text: string;
+    speaker_label: string;
+    connection_epoch: number;
+    turn_order: number;
+  } | null;
 }
 
 
@@ -155,6 +174,17 @@ export type DashboardAction =
       refusals?: GroundingRefusal[];
     }
   | { type: "LATENCY"; latency: Latency }
+  | {
+      type: "PLAYBACK";
+      position_ms: number;
+      duration_ms: number;
+      paused: boolean;
+      status: string;
+      running: boolean;
+      finished: boolean;
+    }
+  | { type: "PARTIAL"; text: string; speaker_label: string; connection_epoch: number; turn_order: number }
+  | { type: "WS_STATUS"; connected: boolean }
   | { type: "TRANSPORT_ERROR"; message: string }
   | { type: "PROVIDER_ERROR"; message: string }
   | { type: "RESET"; incidentId: string };

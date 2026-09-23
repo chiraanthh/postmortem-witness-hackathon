@@ -62,12 +62,13 @@ from backend.state.machine import IncidentMachine, StateDiff
 from backend.state.models import SCHEMA_VERSION, Event, TurnKey, load_schema
 from backend.transcription import audio
 from backend.transcription.audio import AudioError, ControllableFileSource
-from backend.transcription.buffer import Amendment, Utterance
+from backend.transcription.buffer import Amendment, FinalTurn, Utterance
 from backend.transcription.stream import StreamConfig, TranscriptionStream
 
 log = logging.getLogger("postmortem.server")
 
 LATENCY_PUSH_INTERVAL_S = 1.0
+PLAYBACK_PUSH_INTERVAL_S = 0.25
 CONTRACT_VERSION = str(load_schema().get("version") or SCHEMA_VERSION)
 _EXTRACT_SENTINEL = object()
 _EXTRACT_DRAIN_TIMEOUT_S = 60.0
@@ -125,6 +126,46 @@ def provider_error_message(message: str) -> dict[str, Any]:
     return {"type": "provider_error", "message": message}
 
 
+def playback_message(
+    *,
+    position_ms: int,
+    duration_ms: int,
+    paused: bool,
+    status: str,
+    running: bool,
+    finished: bool,
+    speed: float = 1.0,
+) -> dict[str, Any]:
+    """Sidecar cursor for the transport bar — outside the frozen schema."""
+    return {
+        "type": "playback",
+        "playback_position_ms": int(position_ms),
+        "playback_duration_ms": int(duration_ms),
+        "paused": bool(paused),
+        "status": status,
+        "running": bool(running),
+        "finished": bool(finished),
+        "playback_speed": float(speed),
+    }
+
+
+def partial_caption_message(
+    *,
+    text: str,
+    speaker_label: str,
+    connection_epoch: int,
+    turn_order: int,
+) -> dict[str, Any]:
+    """Live ASR partial — one caption line, never extracted."""
+    return {
+        "type": "partial",
+        "text": text,
+        "speaker_label": speaker_label,
+        "connection_epoch": connection_epoch,
+        "turn_order": turn_order,
+    }
+
+
 def refusal_to_wire(
     rejection: Rejection,
     utterance: Utterance,
@@ -176,6 +217,7 @@ class IncidentHub:
         self._extract_queue: queue.Queue[Utterance | object] = queue.Queue()
         self._extract_thread: threading.Thread | None = None
         self._latency_task: asyncio.Task | None = None
+        self._playback_task: asyncio.Task | None = None
         self._running = False
         self._finished = False
         self._file: Path | None = None
@@ -193,6 +235,7 @@ class IncidentHub:
         self._stream: TranscriptionStream | None = None
         self._source: ControllableFileSource | None = None
         self._start_ms: int = 0
+        self._speed: float = 1.0
         self._suppress_teardown = False
 
     def _make_worker(self) -> ExtractionWorker:
@@ -239,9 +282,16 @@ class IncidentHub:
                 "playback_position_ms": self.position_ms,
                 "playback_duration_ms": self._duration_ms,
                 "playback_start_ms": self._start_ms,
+                "playback_speed": self._speed,
             }
 
-    def start(self, path: Path, *, start_ms: int = 0) -> dict[str, Any]:
+    def start(
+        self,
+        path: Path,
+        *,
+        start_ms: int = 0,
+        incident_id: str | None = None,
+    ) -> dict[str, Any]:
         """Start replay, or join an already-running incident as a viewer.
 
         Returns a status dict. When another client already started the same
@@ -271,6 +321,7 @@ class IncidentHub:
                         ),
                         "playback_duration_ms": self._duration_ms,
                         "playback_start_ms": self._start_ms,
+                        "playback_speed": self._speed,
                     }
                 raise RuntimeError(
                     "an incident is already running "
@@ -282,10 +333,12 @@ class IncidentHub:
             # Fresh incident: never inherit a previous visitor's model-picker
             # choice (Sonnet·Gateway left the host broken for the next judge).
             status = config.reset_extraction_runtime()
-            self._reset_board(incident_id=path.stem)
+            board_id = (incident_id or path.stem).strip() or path.stem
+            self._reset_board(incident_id=board_id)
             self._file = path
             self._duration_ms = int(audio.probe_duration_ms(path) or 0)
             self._start_ms = max(0, int(start_ms))
+            self._speed = 1.0
             self._finished = False
             self._last_error = None
             self._running = True
@@ -299,6 +352,7 @@ class IncidentHub:
         )
         self._start_pipeline_thread()
         self._ensure_latency_task()
+        self._ensure_playback_task()
         return {
             "ok": True,
             "joined": False,
@@ -323,6 +377,17 @@ class IncidentHub:
                 return
             self._source.resume()
             self._status = "running"
+
+    def set_speed(self, speed: float) -> None:
+        """Realtime pacing for the file pump (1 / 2 / 3). Audio + ASR stay in sync."""
+        rate = float(speed)
+        if rate not in (1.0, 2.0, 3.0):
+            raise ValueError("speed must be 1, 2, or 3")
+        with self._lock:
+            self._speed = rate
+            if self._source is not None:
+                self._source.set_speed(rate)
+        self._push_playback()
 
     def restart(self) -> None:
         """Full reset: new board, journal cleared, audio from 0."""
@@ -399,6 +464,7 @@ class IncidentHub:
 
         self._start_pipeline_thread()
         self._ensure_latency_task()
+        self._ensure_playback_task()
 
     def _require_file(self) -> Path:
         with self._lock:
@@ -470,6 +536,39 @@ class IncidentHub:
             if self._latency_task is None or self._latency_task.done():
                 self._latency_task = self._loop.create_task(self._latency_loop())
 
+    def _ensure_playback_task(self) -> None:
+        if self._loop is not None:
+            if self._playback_task is None or self._playback_task.done():
+                self._playback_task = self._loop.create_task(self._playback_loop())
+
+    async def _playback_loop(self) -> None:
+        """Push the audio cursor over the WebSocket so the UI never polls it."""
+        try:
+            while True:
+                await asyncio.sleep(PLAYBACK_PUSH_INTERVAL_S)
+                self._push_playback()
+                with self._lock:
+                    done = self._finished and not self._running
+                if done:
+                    self._push_playback()
+                    return
+        except asyncio.CancelledError:
+            return
+
+    def _push_playback(self) -> None:
+        st = self.status
+        self._broadcast_raw(
+            playback_message(
+                position_ms=int(st["playback_position_ms"] or 0),
+                duration_ms=int(st["playback_duration_ms"] or 0),
+                paused=bool(st["paused"]),
+                status=str(st["status"]),
+                running=bool(st["running"]),
+                finished=bool(st["finished"]),
+                speed=float(st.get("playback_speed") or self._speed),
+            )
+        )
+
     def _stop_pipeline(self, *, join: bool, suppress_teardown: bool) -> None:
         with self._lock:
             self._suppress_teardown = suppress_teardown
@@ -500,7 +599,9 @@ class IncidentHub:
 
         stream: TranscriptionStream | None = None
         try:
-            source = ControllableFileSource(path, start_ms=start_ms, realtime=True)
+            source = ControllableFileSource(
+                path, start_ms=start_ms, realtime=True, speed=self._speed
+            )
             self._source = source
             stream_config = StreamConfig(max_speakers=4)
             stream = TranscriptionStream(
@@ -508,6 +609,7 @@ class IncidentHub:
                 stream_config,
                 on_utterance=self._on_utterance,
                 on_amendment=self._on_amendment,
+                on_partial=self._on_partial,
                 on_status=lambda msg: log.info("asr: %s", msg),
             )
             stream.metrics = self.metrics
@@ -520,7 +622,10 @@ class IncidentHub:
                 try:
                     if attempt > 1:
                         source = ControllableFileSource(
-                            path, start_ms=start_ms, realtime=True
+                            path,
+                            start_ms=start_ms,
+                            realtime=True,
+                            speed=self._speed,
                         )
                         self._source = source
                         stream = TranscriptionStream(
@@ -528,6 +633,7 @@ class IncidentHub:
                             stream_config,
                             on_utterance=self._on_utterance,
                             on_amendment=self._on_amendment,
+                            on_partial=self._on_partial,
                             on_status=lambda m: log.info("asr: %s", m),
                         )
                         stream.metrics = self.metrics
@@ -626,6 +732,20 @@ class IncidentHub:
     def _on_utterance(self, utterance: Utterance) -> None:
         # Enqueue only — never block the audio pump on LLM extract.
         self._extract_queue.put(utterance)
+
+    def _on_partial(self, turn: FinalTurn) -> None:
+        """Live caption only — never extracted, never on the board."""
+        text = (turn.text or "").strip()
+        if not text:
+            return
+        self._broadcast_raw(
+            partial_caption_message(
+                text=text,
+                speaker_label=turn.speaker_label,
+                connection_epoch=turn.connection_epoch,
+                turn_order=turn.turn_order,
+            )
+        )
 
     def _process_utterance(self, utterance: Utterance) -> None:
         context = self._running_context()
@@ -866,6 +986,8 @@ async def lifespan(app: FastAPI):
     yield
     if hub._latency_task and not hub._latency_task.done():
         hub._latency_task.cancel()
+    if hub._playback_task and not hub._playback_task.done():
+        hub._playback_task.cancel()
 
 
 app = FastAPI(title="Postmortem Witness", version=CONTRACT_VERSION, lifespan=lifespan)
@@ -890,6 +1012,10 @@ class StartBody(BaseModel):
 
 class SeekBody(BaseModel):
     ms: int = Field(..., ge=0, description="Audio timestamp to seek to, in ms.")
+
+
+class SpeedBody(BaseModel):
+    speed: float = Field(..., description="Playback rate: 1, 2, or 3.")
 
 
 class ExtractionBody(BaseModel):
@@ -1039,8 +1165,13 @@ async def upload_and_start(file: UploadFile = File(...)) -> dict[str, Any]:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         session.audio_path = dest
+        # Display id from the upload name (demo file → incident_01), not call.wav.
+        raw_stem = Path(raw_name).stem or "upload"
+        safe_id = "".join(
+            ch if ch.isalnum() or ch in "-_" else "_" for ch in raw_stem
+        ).strip("_")[:48] or "upload"
         try:
-            started = session.hub.start(dest)
+            started = session.hub.start(dest, incident_id=safe_id)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -1214,6 +1345,17 @@ def pause_session_incident(session_id: str) -> dict[str, Any]:
 def resume_session_incident(session_id: str) -> dict[str, Any]:
     try:
         _session_hub(session_id).hub.resume()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, **_session_hub(session_id).hub.status}
+
+
+@app.post("/s/{session_id}/incident/speed")
+def speed_session_incident(session_id: str, body: SpeedBody) -> dict[str, Any]:
+    try:
+        _session_hub(session_id).hub.set_speed(body.speed)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"ok": True, **_session_hub(session_id).hub.status}

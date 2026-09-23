@@ -3,7 +3,7 @@
   "$id": "https://github.com/chiraanthh/postmortem-witness/shared/schema.json",
   "title": "Postmortem Witness contract",
   "description": "FROZEN. The single contract between backend (Chiraanth) and frontend (Disha). Do not modify without agreement from both owners.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "$defs": {
     "EventType": {
       "description": "action: something a human did or is doing. hypothesis: a proposed cause. status_change: a hypothesis moving between states. thread: an open question or loose end nobody has closed. resolution: an explicit spoken declaration that the incident is resolved; it is a statement about the incident, not about any one hypothesis, so it carries no hypothesis_id. noise: everything else, which is most of a bridge call. speaker_amended: the ASR retroactively reassigned the speaker of an earlier turn; shown to the user, never hidden.",

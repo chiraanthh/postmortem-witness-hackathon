@@ -89,7 +89,7 @@ export function OpenThreads({
           </p>
           <p className="mt-1 text-[12.5px] leading-snug text-ink">
             {silence.questions_unanswered} of {silence.questions_asked}{" "}
-            question{silence.questions_asked === 1 ? "" : "s"} still open
+            {silence.questions_asked === 1 ? "question" : "questions"} still open
             {silence.longest_unanswered_ms > 0
               ? ` · longest ${formatClock(silence.longest_unanswered_ms)}`
               : ""}

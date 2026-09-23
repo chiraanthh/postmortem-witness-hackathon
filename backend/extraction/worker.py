@@ -429,7 +429,34 @@ class ExtractionWorker:
 
         if fields.type == "status_change":
             reason = self._status_change_rejection(fields, utterance)
-            if reason is None and not context.has_hypothesis(fields.hypothesis_id):
+            answers_id = fields.answers_thread_id
+            unknown_hyp = not context.has_hypothesis(fields.hypothesis_id)
+            # Thread answer inventing a board card → keep the answer link,
+            # drop the status_change so we never mint an IMPLICIT card.
+            if (
+                reason is None
+                and unknown_hyp
+                and answers_id
+                and context.has_open_thread(answers_id)
+            ):
+                self._log(
+                    f"status_change on turn {utterance.turn_key} answered "
+                    f"thread {answers_id!r} without a board hypothesis "
+                    f"{fields.hypothesis_id!r}; downgrading to noise+answer"
+                )
+                data.update(
+                    type="noise",
+                    summary="",
+                    hypothesis_id=None,
+                    new_state=None,
+                    evidence_quote=None,
+                    answers_thread_id=answers_id,
+                    claim_subject=None,
+                    claim_assertion=None,
+                    claim_quote=None,
+                )
+                return ExtractedFields(**data), None
+            if reason is None and unknown_hyp:
                 self.unknown_hypothesis_refs += 1
                 self._log(
                     f"status_change on turn {utterance.turn_key} references "

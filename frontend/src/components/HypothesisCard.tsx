@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { HypothesisState } from "../contract";
 import type { HypothesisNode } from "../state/types";
 import { SpeakerBadge } from "./SpeakerBadge";
@@ -13,7 +14,7 @@ const STATE_LABEL: Record<HypothesisState, string> = {
 const MOVE_WINDOW = 1600;
 const CORRECT_WINDOW = 2800;
 
-export function HypothesisCard({
+export const HypothesisCard = memo(function HypothesisCard({
   h,
   tick,
 }: {
@@ -31,11 +32,11 @@ export function HypothesisCard({
     <article
       data-flip-id={h.hypothesis_id}
       className={cx(
-        "group relative rounded-xl border bg-panel2/90 p-3.5 will-change-transform",
+        "group relative rounded-xl border bg-panel2/90 p-3.5",
         confirmed && "border-accent/55 shadow-glow",
-        ruled && "border-line2/70 opacity-80",
+        ruled && "border-ruled/40 opacity-95",
         !confirmed && !ruled && "border-open/35",
-        justMoved && "animate-moveGlow"
+        justMoved && "motion-safe:animate-moveGlow"
       )}
     >
       {justMoved && h.prevState && h.prevState !== h.state && (
@@ -65,7 +66,7 @@ export function HypothesisCard({
             </span>
           )}
           {justCorrected && (
-            <span className="animate-blink text-[9px] font-bold uppercase tracking-wide text-accentSoft">
+            <span className="motion-safe:animate-blink text-[9px] font-bold uppercase tracking-wide text-accentSoft">
               reattributed
             </span>
           )}
@@ -76,4 +77,4 @@ export function HypothesisCard({
       </div>
     </article>
   );
-}
+});

@@ -9,23 +9,31 @@ incident dashboard that exports a finished postmortem.
   directory-ownership split with Disha is retired — edit any path that
   the work requires.
 - shared/schema.json is a frozen contract. Do not modify it. If a change
-  seems necessary, stop and tell the user. It is currently at **v1.5.0**;
-  see "Contract v1.5.0", "Contract v1.4.0" and "Contract v1.3.0" below for
-  what changed and why.
+  seems necessary, stop and tell the user. It is currently at **v1.6.0**
+  (shape unchanged from v1.5.0; see "Contract v1.6.0" / v1.5.0 / v1.4.0 /
+  v1.3.0 below).
 - No database. No auth. No user accounts. State is in memory, single incident.
 - Every LLM extraction call must return schema-valid JSON. "noise" is a
   valid and common answer. Never invent a hypothesis state change that was
   not explicitly spoken.
 - Measure latency at every stage and expose it. It is a demo feature.
 
+## Contract v1.6.0
+
+Release marker only — **no new wire fields**. Shape matches v1.5.0.
+Ships WS-only live/upload updates (poll fallback when disconnected),
+AssemblyAI turn replace-by-key + formatted-final commit, extraction
+prompt/worker tightening (split/dedupe/answers, no implicit card from a
+thread answer), and the unified PlayerBar. Regenerate the recorded-run
+fixture after extraction changes so replay stays honest.
+
 ## Contract v1.5.0
 
-One coherent bump covering silence accounting and claim contradictions so
-we do not need a follow-up v1.6. `shared/schema.json` is the source of
-truth; `shared/events.ts` and `backend/state/models.py` follow it. The
-default extraction model stays Haiku (`EXTRACTION_MODEL` /
-`claude-haiku-4-5-20251001`) — this bump does not change prompts or the
-state machine yet, only the wire types those features will need.
+One coherent bump covering silence accounting and claim contradictions.
+`shared/schema.json` is the source of truth; `shared/events.ts` and
+`backend/state/models.py` follow it. The default extraction model stays
+Haiku (`EXTRACTION_MODEL` / `claude-haiku-4-5-20251001`) — this bump did
+not change prompts or the state machine yet, only the wire types.
 
 **Event claim and address fields (required nullable).** Five fields land on
 every event so a mid-call snapshot matches a fully streamed board:

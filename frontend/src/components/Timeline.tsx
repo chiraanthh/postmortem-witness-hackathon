@@ -1,30 +1,29 @@
-import { useEffect, useRef } from "react";
-import type { TimelineRow } from "../state/types";
-import { TimelineItem } from "./TimelineItem";
+import { memo, useEffect, useRef } from "react";
+import type { TimelineTurn } from "../state/selectors";
+import { TimelineTurnRow } from "./TimelineTurnRow";
 
-export function Timeline({
-  rows,
+export const Timeline = memo(function Timeline({
+  turns,
   tick,
   reconBeatAt,
+  partialCaption,
 }: {
-  rows: TimelineRow[];
+  turns: TimelineTurn[];
   tick: number;
-  /** When set, amended rows rewrite speaker labels on a stagger. */
   reconBeatAt?: number | null;
+  partialCaption?: {
+    text: string;
+    speaker_label: string;
+  } | null;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const count = rows.length;
+  const count = turns.length;
 
-  // Auto-scroll toward the newest item at the bottom as the call unfolds.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [count]);
-
-  const amendedOrder = rows
-    .map((r, i) => ({ r, i }))
-    .filter(({ r }) => r.amendedFrom != null && r.correctedAt != null);
+  }, [count, partialCaption?.text]);
 
   return (
     <section id="timeline" className="panel flex min-h-0 flex-col p-5">
@@ -37,35 +36,45 @@ export function Timeline({
         </div>
         <span className="chip">
           <span className="led text-ink">{String(count).padStart(2, "0")}</span>
-          utterances
+          turns
         </span>
       </div>
 
       <div
         ref={scrollRef}
-        className="scroll-slim -mr-2 max-h-[520px] flex-1 overflow-y-auto pr-2"
+        className="scroll-slim -mr-2 max-h-[520px] flex-1 overflow-x-clip overflow-y-auto pr-2 pl-1"
       >
-        {count === 0 ? (
+        {count === 0 && !partialCaption ? (
           <div className="flex h-40 items-center justify-center text-[12px] text-inkFaint">
             waiting for the first meaningful utterance…
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
-            {rows.map((row) => {
-              const stagger = amendedOrder.findIndex(({ r }) => r.event_id === row.event_id);
-              return (
-                <TimelineItem
-                  key={row.event_id}
-                  row={row}
-                  tick={tick}
-                  reconBeatAt={reconBeatAt ?? null}
-                  staggerIndex={stagger >= 0 ? stagger : 0}
-                />
-              );
-            })}
+            {turns.map((turn) => (
+              <TimelineTurnRow
+                key={turn.key}
+                turn={turn}
+                tick={tick}
+                reconBeatAt={reconBeatAt ?? null}
+              />
+            ))}
+            {partialCaption && partialCaption.text.trim() && (
+              <li className="relative pl-7 opacity-70">
+                <span className="absolute left-[11px] top-1 bottom-0 w-px bg-line" />
+                <span className="absolute left-2 top-[5px] h-2.5 w-2.5 rounded-full border-2 border-base bg-inkFaint motion-safe:animate-blink" />
+                <div className="rounded-lg border border-dashed border-line px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-inkFaint">
+                    Live · speaker {partialCaption.speaker_label}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-snug text-inkMute">
+                    {partialCaption.text}
+                  </p>
+                </div>
+              </li>
+            )}
           </ul>
         )}
       </div>
     </section>
   );
-}
+});

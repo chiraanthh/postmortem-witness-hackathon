@@ -84,6 +84,16 @@ class TestGrouping(unittest.TestCase):
         self.assertEqual(b.add(turn(0, "A", "   ", 0, 500)), [])
         self.assertEqual(b.flush(), [])
 
+    def test_same_turn_key_replaces_text_not_appends(self):
+        """ASR can re-send a growing formatted final for one turn_order."""
+        b = UtteranceBuffer()
+        self.assertEqual(b.add(turn(0, "A", "The API", 0, 800)), [])
+        self.assertEqual(b.add(turn(0, "A", "The API is down.", 0, 1200)), [])
+        done = b.flush()
+        self.assertEqual(len(done), 1)
+        self.assertEqual(done[0].text, "The API is down.")
+        self.assertNotIn("The API The API", done[0].text)
+
 
 class TestConnectionEpoch(unittest.TestCase):
     """The bug this guards against is silent and reattributes speech."""

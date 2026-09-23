@@ -1,7 +1,7 @@
 {
   "incident_id": "incident_01",
   "source": "live IncidentHub capture of demo/audio/incident_01.wav",
-  "contract_version": "1.5.0",
+  "contract_version": "1.6.0",
   "extraction_model": "claude-haiku-4-5-20251001",
   "extraction_provider": "anthropic",
   "extraction_temperature": 0.0,
@@ -29,7 +29,7 @@
       "emit_at_ms": 0,
       "message": {
         "type": "handshake",
-        "contract_version": "1.5.0"
+        "contract_version": "1.6.0"
       }
     },
     {

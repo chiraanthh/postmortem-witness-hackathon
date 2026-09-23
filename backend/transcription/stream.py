@@ -113,6 +113,11 @@ class StreamConfig:
             "format_turns": self.format_turns,
             "speaker_labels": self.speaker_labels,
             "max_speakers": self.max_speakers,
+            # Prefer short replies as separate turns so "Yeah, on it." / "Will
+            # do." do not merge under one speaker label.
+            "end_of_turn_confidence_threshold": 0.4,
+            "min_end_of_turn_silence_when_confident": 160,
+            "min_turn_silence": 100,
         }
         if self.keyterms:
             kwargs["keyterms_prompt"] = list(self.keyterms)
@@ -149,6 +154,7 @@ class TranscriptionStream:
         on_utterance: Callable[[Utterance], None] | None = None,
         on_amendment: Callable[[Amendment, float], None] | None = None,
         on_turn: Callable[[FinalTurn, float | None], None] | None = None,
+        on_partial: Callable[[FinalTurn], None] | None = None,
         on_status: Callable[[str], None] | None = None,
     ) -> None:
         self.chunks = chunks
@@ -158,6 +164,7 @@ class TranscriptionStream:
         self.on_utterance = on_utterance or (lambda u: None)
         self.on_amendment = on_amendment or (lambda a, d: None)
         self.on_turn = on_turn or (lambda t, l: None)
+        self.on_partial = on_partial or (lambda t: None)
         self.on_status = on_status or (lambda m: None)
 
         self.clock = AudioClock()
@@ -339,8 +346,6 @@ class TranscriptionStream:
     def _handle_turn(self, client: StreamingClient, event: TurnEvent) -> None:
         if self._is_stale_client(client):
             return
-        if not event.end_of_turn:
-            return  # partials are not this spike's business
 
         with self._lock:
             session = self._session
@@ -349,42 +354,68 @@ class TranscriptionStream:
 
         speaker = event.speaker_label or self._infer_speaker(event) or UNKNOWN_SPEAKER
         start_ms, end_ms = self._turn_bounds(event, base)
+        text = (event.transcript or "").strip()
 
-        latency: float | None = None
-        if not event.turn_is_formatted:
-            # Docs still describe this pass; our config never sends it. Keep
-            # the branch so a two-phase session would still time the earlier
-            # moment and skip a second ASR sample on the formatted follow-up.
-            latency = self.clock.latency_ms(end_ms)
-            if latency is not None:
-                self.metrics.record(ASR, latency)
-            with self._lock:
-                self.revisions.note_turn(key, speaker)
-                self.turns_seen += 1
-        else:
-            first = self.revisions.first_seen(key)
-            if first is not None:
-                self.metrics.record(FORMAT, max(0.0, now_ms() - first))
-            else:
-                # Observed config: only the formatted final arrives.
-                # ASR = audio chunk sent → formatted final received.
+        # Partials / unformatted: live caption only. Never extract mid-sentence.
+        if not event.end_of_turn or not event.turn_is_formatted:
+            if text:
+                self.on_partial(
+                    FinalTurn(
+                        connection_epoch=key.connection_epoch,
+                        turn_order=key.turn_order,
+                        speaker_label=speaker,
+                        text=text,
+                        start_ms=start_ms,
+                        end_ms=end_ms,
+                        is_formatted=bool(event.turn_is_formatted),
+                    )
+                )
+            if not event.end_of_turn:
+                return
+            # Unformatted final: time it, do not buffer/extract.
+            if not event.turn_is_formatted:
                 latency = self.clock.latency_ms(end_ms)
                 if latency is not None:
                     self.metrics.record(ASR, latency)
                 with self._lock:
+                    self.revisions.note_turn(key, speaker)
                     self.turns_seen += 1
+                turn = FinalTurn(
+                    connection_epoch=key.connection_epoch,
+                    turn_order=key.turn_order,
+                    speaker_label=speaker,
+                    text=text,
+                    start_ms=start_ms,
+                    end_ms=end_ms,
+                    is_formatted=False,
+                )
+                self.on_turn(turn, latency)
+                with self._lock:
+                    self.buffer.add(turn)  # dropped as unformatted
+                return
+
+        # Formatted end-of-turn only from here.
+        latency: float | None = None
+        first = self.revisions.first_seen(key)
+        if first is not None:
+            self.metrics.record(FORMAT, max(0.0, now_ms() - first))
+        else:
+            latency = self.clock.latency_ms(end_ms)
+            if latency is not None:
+                self.metrics.record(ASR, latency)
             with self._lock:
-                # Diarization can also settle between the two finals.
-                self.revisions.note_turn(key, speaker)
+                self.turns_seen += 1
+        with self._lock:
+            self.revisions.note_turn(key, speaker)
 
         turn = FinalTurn(
             connection_epoch=key.connection_epoch,
             turn_order=key.turn_order,
             speaker_label=speaker,
-            text=event.transcript,
+            text=text,
             start_ms=start_ms,
             end_ms=end_ms,
-            is_formatted=event.turn_is_formatted,
+            is_formatted=True,
         )
         self.on_turn(turn, latency)
 

@@ -95,7 +95,7 @@ WAV / upload
 streaming SDK, Anthropic SDK. Frontend: React + Vite + TypeScript +
 Tailwind. No database, no auth — one in-memory incident per process.
 
-**Contract.** `shared/schema.json` **v1.5.0** (mirrored by
+**Contract.** `shared/schema.json` **v1.6.0** (mirrored by
 `shared/events.ts`, `backend/state/models.py`). Join key is always the
 composite `TurnKey(connection_epoch, turn_order)`, never bare
 `turn_order`.

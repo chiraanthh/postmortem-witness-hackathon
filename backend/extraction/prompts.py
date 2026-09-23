@@ -126,18 +126,41 @@ with the work. Never guess who is doing something. Null is normal.
 "bad-deploy", "replica-lag". On status_change, reuse the exact id from the \
 board in the context if the speaker is talking about one that already \
 exists.
+- ONE CAUSE PER HYPOTHESIS. If the speaker names two alternatives in one \
+line ("DNS or connection pool", "cache or the migration"), return TWO \
+hypothesis events — one claim_subject each. Never pack "A or B" into a \
+single hypothesis.
+- DEDUPE BEFORE CREATING. If the new claim is the same cause as a board \
+hypothesis (e.g. "retry logic change on payment worker" ≈ "the deploy" \
+when both mean the bad deploy / retry change), reuse that hypothesis_id \
+instead of inventing a new one. Prefer the existing id.
+- status_change MUST target only the hypothesis whose subject matches the \
+spoken ruling. "Ruled out DNS" sets hypothesis_id to the DNS card, never \
+the connection-pool card. If the board has both, pick the matching one.
 - summary: under 12 words, plain, no editorialising: "Ruled out DNS", \
 "Rolled back the deploy", "Incident declared resolved". Empty for noise. \
 Never let the summary decide the type - classify first, then describe.
 - confidence: your honest confidence. Below 0.5 for anything you are \
 guessing at.
-- Never invent detail that is not in the utterance.
+- Never invent detail that is not in the utterance. If the transcript is \
+truncated mid-word ("we'd"), return noise — do not guess the rest.
 
 THREADS AND ANSWERS (short)
 
 - thread + named person asked → set addressee; else null.
 - answers_thread_id ONLY when this utterance clearly answers an OPEN \
-THREADS id — copy that id. Never infer. Null is the default.
+THREADS id — copy that id exactly. Example: open thread "check payment \
+provider status page" + later "provider status page is green" → set \
+answers_thread_id to that thread's id. Never invent an id. Null is the \
+default.
+- Answering a thread is NOT a hypothesis and NOT a status_change. If the \
+speaker reports a finding that closes an open question ("status page is \
+green", "ruled out the upstream provider" when that was only asked as a \
+thread, never raised as a board hypothesis), return noise (or a short \
+observation) WITH answers_thread_id set. Do not invent an IMPLICIT card.
+- status_change only when the speaker moves a hypothesis that is ALREADY \
+on the board (see OPEN HYPOTHESES). Never status_change a brand-new id \
+just to close a thread.
 - Question-shaped assignments stay actions, not threads: \
 "Rohan, can you draft a status update?", "Someone needs to check X."
 

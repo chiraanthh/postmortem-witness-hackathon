@@ -6,7 +6,7 @@ import {
   releaseLiveLease,
 } from "../lib/api";
 
-const BOOT_ID = "boot";
+const BOOT_ID = "…";
 const HEARTBEAT_MS = 15_000;
 
 export type SessionMode = "live" | "replay" | null;
@@ -46,10 +46,11 @@ export function useIncident(
     if (mode === "live" && !sessionId) {
       return;
     }
-    dispatch({ type: "RESET", incidentId: BOOT_ID });
+    // Never flash "boot" — replay knows the id; live shows … until snapshot.
+    const initialId = mode === "replay" ? "incident_01" : "…";
+    dispatch({ type: "RESET", incidentId: initialId });
     const transport = startTransport(dispatch, {
       forceReplay: mode === "replay",
-      // Hand-authored mock is VITE_MOCK-only (dev). Portal replay never uses it.
       sessionId: mode === "live" ? sessionId : null,
       replaySpeed: speedRef.current,
     });
@@ -58,17 +59,13 @@ export function useIncident(
       transport.stop();
       transportRef.current = null;
     };
-    // replaySpeed changes call setReplaySpeed on the live controller — do not
-    // remount (that would RESET the board).
   }, [runId, active, mode, sessionId]);
 
-  // Push speed into the running replay emitter without resetting state.
   useEffect(() => {
     if (mode !== "replay") return;
     transportRef.current?.setReplaySpeed?.(replaySpeed);
   }, [mode, replaySpeed]);
 
-  // Live seat heartbeat + release on leave / unload.
   useEffect(() => {
     if (mode !== "live" || !leaseId) return;
 
@@ -103,8 +100,23 @@ export function useIncident(
 
   useEffect(() => {
     if (!active) return;
-    const id = window.setInterval(() => setTick(Date.now()), 250);
-    return () => window.clearInterval(id);
+    const syncHidden = () => {
+      document.documentElement.classList.toggle("tab-hidden", document.hidden);
+      if (!document.hidden) setTick(Date.now());
+    };
+    const tickOnce = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setTick(Date.now());
+    };
+    syncHidden();
+    tickOnce();
+    const id = window.setInterval(tickOnce, 250);
+    document.addEventListener("visibilitychange", syncHidden);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", syncHidden);
+      document.documentElement.classList.remove("tab-hidden");
+    };
   }, [active]);
 
   const replay = useCallback(() => setRunId((n) => n + 1), []);
@@ -113,5 +125,25 @@ export function useIncident(
     transportRef.current?.jumpToReconciliation?.();
   }, []);
 
-  return { state, tick, replay, jumpToReconciliation };
+  const pauseReplay = useCallback(() => {
+    transportRef.current?.pauseReplay?.();
+  }, []);
+
+  const resumeReplay = useCallback(() => {
+    transportRef.current?.resumeReplay?.();
+  }, []);
+
+  const seekReplay = useCallback((ms: number) => {
+    transportRef.current?.seekReplay?.(ms);
+  }, []);
+
+  return {
+    state,
+    tick,
+    replay,
+    jumpToReconciliation,
+    pauseReplay,
+    resumeReplay,
+    seekReplay,
+  };
 }

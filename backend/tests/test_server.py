@@ -58,7 +58,7 @@ class TestWireEnvelopes(unittest.TestCase):
         msg = handshake_message()
         self.assertEqual(msg["type"], "handshake")
         self.assertEqual(msg["contract_version"], CONTRACT_VERSION)
-        self.assertEqual(CONTRACT_VERSION, "1.5.0")
+        self.assertEqual(CONTRACT_VERSION, "1.6.0")
 
     def test_snapshot_then_diff_shape(self):
         m = IncidentMachine(incident_id="inc")

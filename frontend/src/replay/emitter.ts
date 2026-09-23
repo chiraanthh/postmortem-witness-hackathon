@@ -52,7 +52,7 @@ export const REPLAY_INCIDENT_ID = fixture.incident_id;
 export const REPLAY_AUDIO_URL = "/media/demo/incident_01.wav";
 
 /** Speeds offered in the replay chrome. Default is realtime (1). */
-export const REPLAY_SPEEDS = [1, 2, 4] as const;
+export const REPLAY_SPEEDS = [1, 2, 3] as const;
 export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number];
 
 function isBoardContent(msg: WireEnvelope): boolean {
@@ -101,6 +101,9 @@ export const REPLAY_RECONCILIATION = {
 export interface ReplayController {
   stop: () => void;
   setSpeed: (speed: number) => void;
+  pause: () => void;
+  resume: () => void;
+  seek: (relativeMs: number) => void;
   /** Apply every frame through the reconciliation DiffOp, then continue. */
   jumpToReconciliation: () => void;
   /** Wall-clock duration of the timed replay after lead-in trim, at speed=1. */
@@ -108,6 +111,9 @@ export interface ReplayController {
   /** Audio/board origin in the original capture (trimmed lead-in). */
   originEmitAtMs: number;
   reconciliationRelMs: number;
+  /** Current capture-relative position (ms after lead-in). */
+  positionMs: () => number;
+  isPaused: () => boolean;
 }
 
 function dispatchFrame(
@@ -173,6 +179,7 @@ export function startReplayEmitter(
   let cursorEmit = ORIGIN_EMIT_AT_MS;
   /** Wall time when cursorEmit was last anchored. */
   let anchorWall = performance.now();
+  let paused = false;
   const applied = new Set<number>();
 
   if (fixture.contract_version !== CONTRACT_VERSION) {
@@ -183,10 +190,15 @@ export function startReplayEmitter(
     return {
       stop: () => undefined,
       setSpeed: () => undefined,
+      pause: () => undefined,
+      resume: () => undefined,
+      seek: () => undefined,
       jumpToReconciliation: () => undefined,
       durationMs: 0,
       originEmitAtMs: 0,
       reconciliationRelMs: 0,
+      positionMs: () => 0,
+      isPaused: () => false,
     };
   }
 
@@ -238,14 +250,14 @@ export function startReplayEmitter(
 
   function scheduleFromCursor() {
     clearTimers();
-    if (stopped) return;
+    if (stopped || paused) return;
     anchorWall = performance.now();
     const base = cursorEmit;
     for (const item of queue) {
       if (applied.has(item.index)) continue;
       const delay = Math.max(0, (item.emit_at_ms - base) / speedFactor);
       const t = window.setTimeout(() => {
-        if (stopped || applied.has(item.index)) return;
+        if (stopped || paused || applied.has(item.index)) return;
         dispatchFrame(dispatch, item.message);
         applied.add(item.index);
         cursorEmit = item.emit_at_ms;
@@ -257,12 +269,37 @@ export function startReplayEmitter(
 
   function setSpeed(next: number) {
     if (stopped) return;
-    const nowEmit = readCursorEmit();
+    const nowEmit = paused ? cursorEmit : readCursorEmit();
     // Catch up any frames that should already have fired at the old speed.
     applyThrough(nowEmit);
     speedFactor = next > 0 ? next : 1;
     cursorEmit = nowEmit;
+    if (!paused) scheduleFromCursor();
+  }
+
+  function pause() {
+    if (stopped || paused) return;
+    cursorEmit = readCursorEmit();
+    paused = true;
+    clearTimers();
+  }
+
+  function resume() {
+    if (stopped || !paused) return;
+    paused = false;
     scheduleFromCursor();
+  }
+
+  function seek(relativeMs: number) {
+    if (stopped) return;
+    const target = ORIGIN_EMIT_AT_MS + Math.max(0, relativeMs);
+    // Forward-only apply; for rewind, restart from snapshot via full remount.
+    if (target < cursorEmit && !paused) {
+      // Cannot rewind mid-queue without remount — leave to App restart.
+    }
+    applyThrough(target);
+    cursorEmit = Math.max(cursorEmit, target);
+    if (!paused) scheduleFromCursor();
   }
 
   function jumpToReconciliation() {
@@ -270,7 +307,7 @@ export function startReplayEmitter(
     if (RECON_EMIT_AT_MS <= 0) return;
     applyThrough(RECON_EMIT_AT_MS);
     cursorEmit = RECON_EMIT_AT_MS;
-    scheduleFromCursor();
+    if (!paused) scheduleFromCursor();
   }
 
   scheduleFromCursor();
@@ -280,7 +317,13 @@ export function startReplayEmitter(
     originEmitAtMs: ORIGIN_EMIT_AT_MS,
     reconciliationRelMs: REPLAY_RECONCILIATION.relative_ms,
     setSpeed,
+    pause,
+    resume,
+    seek,
     jumpToReconciliation,
+    positionMs: () =>
+      Math.max(0, (paused ? cursorEmit : readCursorEmit()) - ORIGIN_EMIT_AT_MS),
+    isPaused: () => paused,
     stop: () => {
       stopped = true;
       clearTimers();

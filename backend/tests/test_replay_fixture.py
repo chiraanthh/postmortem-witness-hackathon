@@ -20,7 +20,7 @@ FIXTURE = (
 class TestReplayFixture(unittest.TestCase):
     def test_fixture_matches_live_capture_board(self) -> None:
         meta = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        self.assertEqual(meta["contract_version"], "1.5.0")
+        self.assertEqual(meta["contract_version"], "1.6.0")
         self.assertEqual(meta["extraction_temperature"], 0.0)
         self.assertGreater(len(meta["messages"]), 10)
 

@@ -130,13 +130,28 @@ class UtteranceBuffer:
     # --- ingest ------------------------------------------------------------
 
     def add(self, turn: FinalTurn) -> list[Utterance]:
-        """Feed one finalized turn. Returns any utterances it completed."""
+        """Feed one finalized turn. Returns any utterances it completed.
+
+        Same TurnKey is replaced, never appended — AssemblyAI can re-send a
+        growing formatted final for one turn_order; concatenating produced
+        repeated words in the transcript.
+        """
         if not turn.is_formatted:
             # Timed elsewhere, never read. Extraction runs on formatted text.
             self.dropped_unformatted += 1
             return []
 
         if not turn.text.strip():
+            return []
+
+        # Re-delivery of the same turn: replace text in place, do not re-merge.
+        existing = self._by_turn.get(turn.key)
+        if existing is not None:
+            if existing.turn_keys == [turn.key]:
+                existing.text = turn.text.strip()
+                existing.end_ms = max(existing.end_ms, turn.end_ms)
+                existing.speaker_label = turn.speaker_label
+            # Already merged into a multi-turn utterance — leave membership.
             return []
 
         flushed: list[Utterance] = []

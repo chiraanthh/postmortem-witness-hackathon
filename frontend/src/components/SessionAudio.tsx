@@ -8,8 +8,8 @@ function muteKey(sessionKey: string): string {
 
 /**
  * Audible playback of the same WAV the pipeline consumes.
- * Server / replay clock is the source of truth; resyncs when drift > 250ms.
- * Starts only after `armed` becomes true (user gesture that began the session).
+ * Reports currentTime as the single UI clock via onClockMs.
+ * Server/replay target is used only to correct drift > 250ms.
  */
 export function SessionAudio({
   src,
@@ -18,6 +18,7 @@ export function SessionAudio({
   paused,
   playbackRate = 1,
   armed,
+  onClockMs,
 }: {
   src: string | null;
   sessionKey: string;
@@ -26,6 +27,7 @@ export function SessionAudio({
   playbackRate?: number;
   /** Set true on the click that starts the session — never on page load. */
   armed: boolean;
+  onClockMs?: (ms: number) => void;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = useState(() => {
@@ -36,6 +38,8 @@ export function SessionAudio({
     }
   });
   const [ready, setReady] = useState(false);
+  const onClockRef = useRef(onClockMs);
+  onClockRef.current = onClockMs;
 
   useEffect(() => {
     try {
@@ -50,6 +54,7 @@ export function SessionAudio({
     if (!el || !src) return;
     el.src = src;
     el.load();
+    setReady(false);
     const onCanPlay = () => setReady(true);
     el.addEventListener("canplay", onCanPlay);
     return () => el.removeEventListener("canplay", onCanPlay);
@@ -86,12 +91,15 @@ export function SessionAudio({
     });
   }, [armed, paused, ready, src, getTargetMs]);
 
-  // Continuous drift correction while playing.
+  // Continuous drift correction + clock report while playing.
   useEffect(() => {
-    if (!armed || paused) return;
+    if (!armed) return;
     const id = window.setInterval(() => {
       const el = audioRef.current;
-      if (!el || el.paused) return;
+      if (!el) return;
+      const ms = Math.round(el.currentTime * 1000);
+      onClockRef.current?.(ms);
+      if (paused || el.paused) return;
       const target = getTargetMs();
       if (target == null || !Number.isFinite(target)) return;
       const want = Math.max(0, target / 1000);
@@ -102,7 +110,7 @@ export function SessionAudio({
           /* ignore */
         }
       }
-    }, 500);
+    }, 200);
     return () => window.clearInterval(id);
   }, [armed, paused, getTargetMs]);
 
@@ -113,7 +121,7 @@ export function SessionAudio({
   if (!src) return null;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5">
       <audio ref={audioRef} preload="auto" playsInline />
       <button
         type="button"

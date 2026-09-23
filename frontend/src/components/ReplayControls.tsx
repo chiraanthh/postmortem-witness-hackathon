@@ -1,7 +1,7 @@
 import { REPLAY_SPEEDS, type ReplaySpeed } from "../replay/emitter";
 
 /**
- * Replay-only chrome: realtime by default, optional 2x/4x, and a jump to
+ * Replay-only chrome: realtime by default, optional 2x/3x, and a jump to
  * the teardown reconciliation beat so judges skip the long middle.
  */
 export function ReplayControls({

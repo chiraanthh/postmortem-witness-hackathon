@@ -13,6 +13,12 @@ export interface Transport {
   stop: () => void;
   setReplaySpeed?: (speed: number) => void;
   jumpToReconciliation?: () => void;
+  pauseReplay?: () => void;
+  resumeReplay?: () => void;
+  seekReplay?: (ms: number) => void;
+  replayPositionMs?: () => number;
+  replayPaused?: () => boolean;
+  replayDurationMs?: number;
 }
 
 type WireEnvelope =
@@ -35,7 +41,23 @@ type WireEnvelope =
       >;
       refusals?: GroundingRefusal[];
     }
-  | { type: "provider_error"; message: string };
+  | { type: "provider_error"; message: string }
+  | {
+      type: "playback";
+      playback_position_ms: number;
+      playback_duration_ms: number;
+      paused: boolean;
+      status: string;
+      running: boolean;
+      finished: boolean;
+    }
+  | {
+      type: "partial";
+      text: string;
+      speaker_label: string;
+      connection_epoch: number;
+      turn_order: number;
+    };
 
 function resolveWsUrl(sessionId?: string | null): string {
   const fromEnv = import.meta.env.VITE_WS_URL as string | undefined;
@@ -133,6 +155,7 @@ function startLiveTransport(
     ws.addEventListener("open", () => {
       // eslint-disable-next-line no-console
       console.info(`[transport] connected ${url}`);
+      dispatch({ type: "WS_STATUS", connected: true });
     });
 
     ws.addEventListener("error", () => {
@@ -141,6 +164,7 @@ function startLiveTransport(
     });
 
     ws.addEventListener("close", () => {
+      dispatch({ type: "WS_STATUS", connected: false });
       if (stopped) return;
       if (!sawHandshake) {
         scheduleReconnect(`WebSocket closed before handshake (${url})`);
@@ -199,6 +223,30 @@ function startLiveTransport(
           ops: msg.ops ?? [],
           provenance: msg.provenance,
           refusals: msg.refusals,
+        });
+        return;
+      }
+
+      if (msg.type === "playback") {
+        dispatch({
+          type: "PLAYBACK",
+          position_ms: msg.playback_position_ms ?? 0,
+          duration_ms: msg.playback_duration_ms ?? 0,
+          paused: Boolean(msg.paused),
+          status: msg.status ?? "idle",
+          running: Boolean(msg.running),
+          finished: Boolean(msg.finished),
+        });
+        return;
+      }
+
+      if (msg.type === "partial") {
+        dispatch({
+          type: "PARTIAL",
+          text: msg.text ?? "",
+          speaker_label: msg.speaker_label ?? "?",
+          connection_epoch: msg.connection_epoch ?? 0,
+          turn_order: msg.turn_order ?? 0,
         });
         return;
       }
@@ -276,6 +324,12 @@ export function startTransport(
       stop: controller.stop,
       setReplaySpeed: controller.setSpeed,
       jumpToReconciliation: controller.jumpToReconciliation,
+      pauseReplay: controller.pause,
+      resumeReplay: controller.resume,
+      seekReplay: controller.seek,
+      replayPositionMs: controller.positionMs,
+      replayPaused: controller.isPaused,
+      replayDurationMs: controller.durationMs,
     };
   }
 

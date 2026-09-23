@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIncident, type SessionMode } from "./state/useIncident";
 import {
-  selectTimeline,
+  selectTimelineTurns,
   selectHypothesesByState,
   selectThreads,
   selectActions,
@@ -18,17 +18,15 @@ import { OpenThreads } from "./components/OpenThreads";
 import { ActionsPanel } from "./components/ActionsPanel";
 import { LatencyOverlay } from "./components/LatencyOverlay";
 import { RefusalPanel } from "./components/RefusalPanel";
-import { PlaybackBar } from "./components/PlaybackBar";
+import { PlayerBar } from "./components/PlayerBar";
 import { Portal } from "./components/Portal";
 import { UploadPage } from "./components/UploadPage";
-import { SessionAudio } from "./components/SessionAudio";
-import { ReplayControls } from "./components/ReplayControls";
 import {
   ReconciliationBeat,
   useReconciliationDim,
 } from "./components/ReconciliationBeat";
 import { cx } from "./lib/cx";
-import { apiBase } from "./lib/api";
+import { apiBase, postJson, sessionPath } from "./lib/api";
 import {
   portalReplaySpeed,
   REPLAY_AUDIO_URL,
@@ -43,24 +41,27 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [leaseId, setLeaseId] = useState<string | null>(null);
   const [audioArmed, setAudioArmed] = useState(false);
-  const [livePaused, setLivePaused] = useState(false);
-  const [livePosMs, setLivePosMs] = useState(0);
+  const [userPaused, setUserPaused] = useState(false);
+  const [audioClockMs, setAudioClockMs] = useState(0);
   const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(() => {
     const n = portalReplaySpeed();
-    if (n === 2 || n === 4) return n;
+    if (n === 2 || n === 3) return n;
     return 1;
   });
   const replayOriginRef = useRef(0);
   const replayStartWallRef = useRef(0);
 
-  const { state, tick, replay, jumpToReconciliation } = useIncident(
-    mode,
-    sessionId,
-    leaseId,
-    replaySpeed
-  );
+  const {
+    state,
+    tick,
+    replay,
+    jumpToReconciliation,
+    pauseReplay,
+    resumeReplay,
+    seekReplay,
+  } = useIncident(mode, sessionId, leaseId, replaySpeed);
 
-  const timeline = useMemo(() => selectTimeline(state), [state]);
+  const timelineTurns = useMemo(() => selectTimelineTurns(state), [state]);
   const columns = useMemo(() => selectHypothesesByState(state), [state]);
   const threads = useMemo(() => selectThreads(state), [state]);
   const actions = useMemo(() => selectActions(state), [state]);
@@ -82,26 +83,29 @@ export default function App() {
     setSessionId(null);
     setLeaseId(null);
     setAudioArmed(false);
+    setUserPaused(false);
+    setAudioClockMs(0);
     setPortalView("home");
   };
 
-  // Replay: arm audio on the portal click (above); keep wall clock for drift.
   useEffect(() => {
     if (mode !== "replay") return;
     replayStartWallRef.current = performance.now();
     replayOriginRef.current = 0;
+    setUserPaused(false);
+    setAudioClockMs(0);
   }, [mode]);
 
+  // Server / replay target for audio drift correction only — not the UI clock.
   const getTargetMs = useCallback((): number | null => {
-    if (mode === "live" || mode === "replay") {
-      if (mode === "live") return livePosMs;
-      // Prefer board clock (incident audio time). Fall back to wall*speed.
+    if (mode === "live") return state.playback.position_ms;
+    if (mode === "replay") {
       if (state.clock_ms > 0) return state.clock_ms;
       const elapsed = performance.now() - replayStartWallRef.current;
       return replayOriginRef.current + elapsed * replaySpeed;
     }
     return null;
-  }, [mode, livePosMs, state.clock_ms, replaySpeed]);
+  }, [mode, state.clock_ms, state.playback.position_ms, replaySpeed]);
 
   const audioSrc =
     mode === "replay"
@@ -113,6 +117,33 @@ export default function App() {
   const sessionKey =
     mode === "replay" ? "replay" : sessionId ? `s:${sessionId}` : "none";
 
+  // One clock: prefer the audio element's currentTime; fall back to WS cursor.
+  const clockMs =
+    audioClockMs > 0
+      ? audioClockMs
+      : mode === "live"
+        ? state.playback.position_ms || state.clock_ms
+        : state.clock_ms;
+
+  const durationMs =
+    mode === "replay"
+      ? 282000
+      : state.playback.duration_ms > 0
+        ? state.playback.duration_ms
+        : 282000;
+
+  const paused =
+    mode === "replay"
+      ? userPaused
+      : userPaused || state.playback.paused;
+
+  const displayIncidentId =
+    state.incident_id === "…" || state.incident_id === "boot"
+      ? stats.status === "CONNECTING"
+        ? "Connecting…"
+        : "…"
+      : state.incident_id;
+
   if (mode === null) {
     if (portalView === "upload") {
       return (
@@ -122,6 +153,8 @@ export default function App() {
             setSessionId(sid);
             setLeaseId(lid);
             setAudioArmed(true);
+            setUserPaused(false);
+            setAudioClockMs(0);
             setMode("live");
           }}
         />
@@ -133,12 +166,16 @@ export default function App() {
           setSessionId(sid);
           setLeaseId(lid);
           setAudioArmed(true);
+          setUserPaused(false);
+          setAudioClockMs(0);
           setMode("live");
         }}
         onEnterReplay={() => {
           setSessionId(null);
           setLeaseId(null);
           setAudioArmed(true);
+          setUserPaused(false);
+          setAudioClockMs(0);
           replayStartWallRef.current = performance.now();
           setMode("replay");
         }}
@@ -148,13 +185,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col overflow-x-clip">
       <TopBar
-        incidentId={state.incident_id}
+        incidentId={displayIncidentId}
         status={stats.status}
-        clockMs={state.clock_ms}
+        clockMs={clockMs}
         onReplay={() => {
           replay();
+          setUserPaused(false);
+          setAudioClockMs(0);
           if (mode === "replay") {
             replayStartWallRef.current = performance.now();
           }
@@ -162,30 +201,19 @@ export default function App() {
         onLeave={leave}
         sessionLabel={
           mode === "replay"
-            ? "recorded live pipeline"
-            : sessionId
-              ? `live · ${sessionId.slice(0, 6)}`
-              : "live"
+            ? "recorded"
+            : stats.status === "CONNECTING"
+              ? "Connecting…"
+              : sessionId
+                ? `live · ${sessionId.slice(0, 6)}`
+                : "live"
         }
         sessionId={sessionId}
-        audio={
-          <SessionAudio
-            src={audioSrc}
-            sessionKey={sessionKey}
-            getTargetMs={getTargetMs}
-            paused={mode === "live" ? livePaused : false}
-            playbackRate={mode === "replay" ? replaySpeed : 1}
-            armed={audioArmed}
+        latencyChip={
+          <LatencyOverlay
+            latency={state.latency}
+            source={mode === "replay" ? "recorded" : "live"}
           />
-        }
-        replayControls={
-          mode === "replay" ? (
-            <ReplayControls
-              speed={replaySpeed}
-              onSpeed={setReplaySpeed}
-              onJumpReconciliation={jumpToReconciliation}
-            />
-          ) : null
         }
       />
 
@@ -216,62 +244,47 @@ export default function App() {
 
       <main
         className={cx(
-          "mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 transition-[filter,opacity] duration-700",
+          "mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-5 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 transition-[filter,opacity] duration-700",
           dimming && "opacity-70 saturate-50"
         )}
       >
         <HypothesisBoard columns={columns} tick={tick} />
 
         <IncidentHero
-          incidentId={state.incident_id}
+          incidentId={displayIncidentId}
           stats={stats}
-          clockMs={state.clock_ms}
+          clockMs={clockMs}
           speakers={speakers}
           ingested={state.ingested}
           confirmedCause={confirmedCause}
         />
 
-        <StatStrip stats={stats} clockMs={state.clock_ms} />
-
-        {mode === "live" && sessionId && (
-          <PlaybackBar
-            onRestartTransport={replay}
-            sessionId={sessionId}
-            leaseId={leaseId}
-            onPlaybackMeta={(meta) => {
-              if (typeof meta.playback_position_ms === "number") {
-                setLivePosMs(meta.playback_position_ms);
-              }
-              if (typeof meta.paused === "boolean") {
-                setLivePaused(meta.paused);
-              }
-            }}
-          />
-        )}
+        <StatStrip stats={stats} clockMs={clockMs} />
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-          <div className="flex flex-col gap-5 lg:col-span-6">
+          <div className="flex min-w-0 flex-col gap-5 lg:col-span-6">
             <Timeline
-              rows={timeline}
+              turns={timelineTurns}
               tick={tick}
               reconBeatAt={state.reconciliationBeatAt}
+              partialCaption={mode === "live" ? state.partialCaption : null}
             />
             <RefusalPanel refusals={state.refusals} />
           </div>
-          <div className="flex flex-col gap-5 lg:col-span-3">
+          <div className="flex min-w-0 flex-col gap-5 lg:col-span-3">
             <OpenThreads
               threads={threads}
-              clockMs={state.clock_ms}
+              clockMs={clockMs}
               silence={state.silence}
               resolved={state.resolved}
             />
           </div>
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             <ActionsPanel actions={actions} />
           </div>
         </div>
 
-        <footer className="pb-16 pt-2 text-center text-[11px] font-medium text-inkFaint">
+        <footer className="pb-24 pt-2 text-center text-[11px] font-medium text-inkFaint">
           Postmortem Witness · listener-only ·{" "}
           {mode === "replay"
             ? "recorded run of the live pipeline"
@@ -281,9 +294,71 @@ export default function App() {
         </footer>
       </main>
 
-      <LatencyOverlay
-        latency={state.latency}
-        source={mode === "replay" ? "recorded" : "live"}
+      <PlayerBar
+        mode={mode === "replay" ? "replay" : "live"}
+        sessionId={sessionId}
+        leaseId={leaseId}
+        playback={
+          mode === "replay"
+            ? {
+                position_ms: clockMs,
+                duration_ms: durationMs,
+                paused: userPaused,
+                status: userPaused ? "paused" : "replay",
+                running: true,
+                finished: state.resolved,
+              }
+            : state.playback
+        }
+        wsConnected={mode === "live" ? state.wsConnected : true}
+        clockMs={clockMs}
+        durationMs={durationMs}
+        speed={replaySpeed}
+        onSpeed={setReplaySpeed}
+        paused={paused}
+        onPauseToggle={() => {
+          if (mode === "replay") {
+            if (userPaused) {
+              resumeReplay();
+              setUserPaused(false);
+            } else {
+              pauseReplay();
+              setUserPaused(true);
+            }
+            return;
+          }
+          const next = !paused;
+          setUserPaused(next);
+          if (!sessionId) return;
+          const path = next
+            ? sessionPath(sessionId, "/incident/pause")
+            : sessionPath(sessionId, "/incident/resume");
+          void postJson(path);
+        }}
+        onRestart={() => {
+          replay();
+          setUserPaused(false);
+          setAudioClockMs(0);
+          if (mode === "replay") {
+            replayStartWallRef.current = performance.now();
+          }
+        }}
+        onJumpReconciliation={
+          mode === "replay" ? jumpToReconciliation : undefined
+        }
+        onSeek={
+          mode === "replay"
+            ? (ms) => {
+                seekReplay(ms);
+                setAudioClockMs(ms);
+              }
+            : undefined
+        }
+        audioSrc={audioSrc}
+        sessionKey={sessionKey}
+        getTargetMs={getTargetMs}
+        onAudioClock={setAudioClockMs}
+        audioArmed={audioArmed}
       />
     </div>
   );

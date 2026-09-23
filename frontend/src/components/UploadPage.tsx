@@ -4,6 +4,7 @@ import { apiBase } from "../lib/api";
 /**
  * Portal → upload flow. Warns that real audio scores lower than the demo.
  * Consumes a live seat; never hangs a spinner on reject.
+ * Shows upload % then "Normalising audio…" while ffmpeg runs server-side.
  */
 export function UploadPage({
   onCancel,
@@ -14,43 +15,63 @@ export function UploadPage({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"idle" | "upload" | "normalise">("idle");
+  const [pct, setPct] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   useEffect(() => {
-    // Clear stale file input if remounted.
     if (inputRef.current) inputRef.current.value = "";
+    return () => {
+      xhrRef.current?.abort();
+    };
   }, []);
 
   const onFile = useCallback(
-    async (file: File | null) => {
+    (file: File | null) => {
       if (!file) return;
       setBusy(true);
       setError(null);
-      setProgress("Uploading and normalising…");
-      const ctrl = new AbortController();
-      const kill = window.setTimeout(() => ctrl.abort(), 180_000);
-      try {
-        const body = new FormData();
-        body.append("file", file);
-        const res = await fetch(`${apiBase()}/sessions/upload`, {
-          method: "POST",
-          body,
-          signal: ctrl.signal,
-        });
-        const data = (await res.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
+      setPhase("upload");
+      setPct(0);
+
+      const body = new FormData();
+      body.append("file", file);
+
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
+      xhr.open("POST", `${apiBase()}/sessions/upload`);
+      xhr.timeout = 180_000;
+
+      xhr.upload.onprogress = (ev) => {
+        if (!ev.lengthComputable) return;
+        setPct(Math.min(99, Math.round((ev.loaded / ev.total) * 100)));
+      };
+      xhr.upload.onload = () => {
+        setPct(100);
+        setPhase("normalise");
+      };
+
+      xhr.onload = () => {
+        xhrRef.current = null;
+        let data: Record<string, unknown> = {};
+        try {
+          data = JSON.parse(xhr.responseText || "{}") as Record<string, unknown>;
+        } catch {
+          /* ignore */
+        }
         const detail = (data.detail ?? data) as Record<string, unknown> | string;
-        if (res.status === 503) {
+        if (xhr.status === 503) {
           const msg =
             typeof detail === "object" && detail && "message" in detail
               ? String(detail.message)
               : "Live seats are full";
-          throw new Error(msg);
+          setError(msg);
+          setBusy(false);
+          setPhase("idle");
+          return;
         }
-        if (!res.ok) {
+        if (xhr.status < 200 || xhr.status >= 300) {
           const msg =
             typeof detail === "string"
               ? detail
@@ -58,30 +79,45 @@ export function UploadPage({
                 ? String(detail.message)
                 : typeof detail === "object" && detail
                   ? JSON.stringify(detail)
-                  : `upload failed (${res.status})`;
-          throw new Error(msg);
+                  : `upload failed (${xhr.status})`;
+          setError(msg);
+          setBusy(false);
+          setPhase("idle");
+          return;
         }
         if (
           typeof data.session_id !== "string" ||
           typeof data.lease_id !== "string"
         ) {
-          throw new Error("server did not return a session");
+          setError("server did not return a session");
+          setBusy(false);
+          setPhase("idle");
+          return;
         }
-        setProgress(null);
-        onStarted(data.session_id, data.lease_id);
-      } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.name === "AbortError"
-              ? "Upload timed out — try a shorter file"
-              : err.message
-            : String(err);
-        setError(msg);
-        setProgress(null);
-      } finally {
-        window.clearTimeout(kill);
+        setPhase("idle");
         setBusy(false);
-      }
+        onStarted(data.session_id, data.lease_id);
+      };
+
+      xhr.onerror = () => {
+        xhrRef.current = null;
+        setError("Network error during upload");
+        setBusy(false);
+        setPhase("idle");
+      };
+      xhr.ontimeout = () => {
+        xhrRef.current = null;
+        setError("Upload timed out — try a shorter file");
+        setBusy(false);
+        setPhase("idle");
+      };
+      xhr.onabort = () => {
+        xhrRef.current = null;
+        setBusy(false);
+        setPhase("idle");
+      };
+
+      xhr.send(body);
     },
     [onStarted]
   );
@@ -92,7 +128,10 @@ export function UploadPage({
         <div className="mx-auto flex h-14 max-w-[720px] items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => {
+              xhrRef.current?.abort();
+              onCancel();
+            }}
             className="text-[13px] font-medium text-inkMute hover:text-ink"
           >
             ← Portal
@@ -133,7 +172,7 @@ export function UploadPage({
               disabled={busy}
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
-                void onFile(f);
+                onFile(f);
               }}
             />
             {busy ? "Working…" : "Choose audio file"}
@@ -142,16 +181,32 @@ export function UploadPage({
             type="button"
             disabled={busy}
             className="pill-btn border border-line2 bg-raised/70 text-ink"
-            onClick={onCancel}
+            onClick={() => {
+              xhrRef.current?.abort();
+              onCancel();
+            }}
           >
             Cancel
           </button>
         </div>
 
-        {progress && (
-          <p className="text-[12px] text-inkMute" role="status">
-            {progress}
-          </p>
+        {phase !== "idle" && (
+          <div className="flex flex-col gap-2" role="status">
+            <p className="text-[12px] text-inkMute">
+              {phase === "upload"
+                ? `Uploading… ${pct}%`
+                : "Normalising audio…"}
+            </p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-panel2">
+              <div
+                className="h-full rounded-full bg-accent transition-[width] duration-200"
+                style={{
+                  width: phase === "normalise" ? "100%" : `${pct}%`,
+                  opacity: phase === "normalise" ? 0.55 : 1,
+                }}
+              />
+            </div>
+          </div>
         )}
         {error && (
           <p className="text-[12px] text-danger" role="alert">

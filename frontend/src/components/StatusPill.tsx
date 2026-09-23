@@ -2,14 +2,19 @@ import type { IncidentStats } from "../state/selectors";
 import { cx } from "../lib/cx";
 
 const STYLE: Record<IncidentStats["status"], { dot: string; text: string; ring: string }> = {
+  CONNECTING: {
+    dot: "bg-open motion-safe:animate-blink",
+    text: "text-open",
+    ring: "border-open/40",
+  },
   STANDBY: { dot: "bg-inkFaint", text: "text-inkMute", ring: "border-line2" },
   INVESTIGATING: {
-    dot: "bg-open animate-blink",
+    dot: "bg-open motion-safe:animate-blink",
     text: "text-open",
     ring: "border-open/40",
   },
   IDENTIFIED: {
-    dot: "bg-accent animate-blink",
+    dot: "bg-accent motion-safe:animate-blink",
     text: "text-accentSoft",
     ring: "border-accent/50",
   },

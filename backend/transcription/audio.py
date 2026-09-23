@@ -298,6 +298,7 @@ class ControllableFileSource:
         *,
         start_ms: int = 0,
         realtime: bool = True,
+        speed: float = 1.0,
     ) -> None:
         if not path.exists():
             raise AudioError(f"No such audio file: {path}")
@@ -305,6 +306,7 @@ class ControllableFileSource:
         self.start_ms = max(0, int(start_ms))
         self.realtime = realtime
         self.position_ms = self.start_ms
+        self._speed = max(0.25, min(float(speed), 4.0))
         self._gate = threading.Event()
         self._gate.set()
         self._stop = threading.Event()
@@ -322,6 +324,15 @@ class ControllableFileSource:
     def paused(self) -> bool:
         return not self._gate.is_set() and not self._stop.is_set()
 
+    @property
+    def speed(self) -> float:
+        return self._speed
+
+    def set_speed(self, speed: float) -> None:
+        """Change realtime pacing (1.0 = wall clock). Reanchors immediately."""
+        self._speed = max(0.25, min(float(speed), 4.0))
+        self.reset_pacing()
+
     def stop(self) -> None:
         self._stop.set()
         self._gate.set()
@@ -336,8 +347,9 @@ class ControllableFileSource:
         self._reset_pacing.set()
 
     def _reanchor_wall0(self, chunk: Chunk) -> float:
-        """Wall clock such that `chunk` is due immediately."""
-        return time.monotonic() - ((chunk.end_ms - self.start_ms) / 1000.0)
+        """Wall clock such that `chunk` is due immediately at current speed."""
+        rate = self._speed if self._speed > 0 else 1.0
+        return time.monotonic() - ((chunk.end_ms - self.start_ms) / (1000.0 * rate))
 
     def __iter__(self) -> Iterator[Chunk]:
         wall0 = time.monotonic()
@@ -355,7 +367,8 @@ class ControllableFileSource:
                 self._reset_pacing.clear()
                 wall0 = self._reanchor_wall0(chunk)
             if self.realtime:
-                due = wall0 + (chunk.end_ms - self.start_ms) / 1000.0
+                rate = self._speed if self._speed > 0 else 1.0
+                due = wall0 + (chunk.end_ms - self.start_ms) / (1000.0 * rate)
                 drift = due - time.monotonic()
                 if drift > 0:
                     # Sleep in slices so pause/stop/reset_pacing can interrupt.

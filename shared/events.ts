@@ -1,11 +1,15 @@
 /**
- * Postmortem Witness — shared event contract. v1.5.0
+ * Postmortem Witness — shared event contract. v1.6.0
  *
  * Generated from shared/schema.json. That file is the source of truth and is
  * FROZEN: if this file and the schema ever disagree, the schema wins.
  *
  * Frontend imports these types. Do not edit by hand to "fix" a mismatch —
  * raise it with the backend owner instead.
+ *
+ * CHANGED IN 1.6.0 — release bump only (no new wire fields). Pipeline/UI
+ * fixes: WS-only state updates, turn dedupe, extraction prompt tightening,
+ * unified player bar. Schema shape is unchanged from 1.5.0.
  *
  * CHANGED IN 1.5.0 — silence accounting + claim contradictions, one bump:
  *

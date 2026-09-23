@@ -43,6 +43,16 @@ export function makeInitialState(incidentId: string): DashboardState {
     contradictionBeatId: 0,
     clock_ms: 0,
     ingested: 0,
+    playback: {
+      position_ms: 0,
+      duration_ms: 0,
+      paused: false,
+      status: "idle",
+      running: false,
+      finished: false,
+    },
+    wsConnected: false,
+    partialCaption: null,
   };
 }
 
@@ -272,7 +282,8 @@ function applyEvent(state: DashboardState, e: Event, now: number): DashboardStat
 function applySnapshot(
   snap: IncidentState,
   provenance?: Record<string, { provider: string; model: string; request_id?: string | null }>,
-  refusals?: GroundingRefusal[]
+  refusals?: GroundingRefusal[],
+  wsConnected = false
 ): DashboardState {
   let next: DashboardState = {
     ...makeInitialState(snap.incident_id),
@@ -281,6 +292,7 @@ function applySnapshot(
     latency: snap.latency,
     provenanceById: provenance ? { ...provenance } : {},
     refusals: refusals ? [...refusals] : [],
+    wsConnected,
   };
   const now = Date.now();
   for (const e of snap.timeline) next = applyEvent(next, e, now);
@@ -450,7 +462,12 @@ export function dashboardReducer(
     case "INGEST":
       return applyEvent(state, action.event, Date.now());
     case "SNAPSHOT":
-      return applySnapshot(action.state, action.provenance, action.refusals);
+      return applySnapshot(
+        action.state,
+        action.provenance,
+        action.refusals,
+        state.wsConnected
+      );
     case "DIFF": {
       const now = Date.now();
       let next = state;
@@ -470,8 +487,34 @@ export function dashboardReducer(
     }
     case "LATENCY":
       return { ...state, latency: action.latency };
+    case "PLAYBACK":
+      return {
+        ...state,
+        playback: {
+          position_ms: action.position_ms,
+          duration_ms: action.duration_ms,
+          paused: action.paused,
+          status: action.status,
+          running: action.running,
+          finished: action.finished,
+        },
+        // Keep the hero clock aligned with the server audio cursor.
+        clock_ms: Math.max(state.clock_ms, action.position_ms),
+      };
+    case "PARTIAL":
+      return {
+        ...state,
+        partialCaption: {
+          text: action.text,
+          speaker_label: action.speaker_label,
+          connection_epoch: action.connection_epoch,
+          turn_order: action.turn_order,
+        },
+      };
+    case "WS_STATUS":
+      return { ...state, wsConnected: action.connected };
     case "TRANSPORT_ERROR":
-      return { ...state, transportError: action.message };
+      return { ...state, transportError: action.message, wsConnected: false };
     case "PROVIDER_ERROR":
       return { ...state, providerError: action.message };
     case "RESET":

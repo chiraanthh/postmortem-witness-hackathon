@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiBase, DEMO_FILE, postJson, sessionPath } from "../lib/api";
 
-type Health = {
+export type PlaybackMeta = {
   status?: string;
   running?: boolean;
   finished?: boolean;
@@ -18,73 +18,133 @@ function fmt(ms: number): string {
 }
 
 /**
- * Demo playback controls for a live-pipeline session (requires session + lease).
+ * Demo playback controls. Cursor comes from the WebSocket `playback` frames
+ * while connected. HTTP GET /incident is only a fallback when the socket is
+ * down — at most one in-flight request, 1s cadence, paused when the tab is
+ * hidden.
  */
 export function PlaybackBar({
   onRestartTransport,
   sessionId,
   leaseId,
+  playback,
+  wsConnected,
   onPlaybackMeta,
+  muteControl,
+  speedControl,
 }: {
   onRestartTransport: () => void;
   sessionId: string;
   leaseId: string | null;
-  onPlaybackMeta?: (meta: Health) => void;
+  playback: {
+    position_ms: number;
+    duration_ms: number;
+    paused: boolean;
+    status: string;
+    running: boolean;
+    finished: boolean;
+  };
+  wsConnected: boolean;
+  onPlaybackMeta?: (meta: PlaybackMeta) => void;
+  muteControl?: React.ReactNode;
+  speedControl?: React.ReactNode;
 }) {
-  const [health, setHealth] = useState<Health>({});
+  const [fallback, setFallback] = useState<PlaybackMeta>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seekMs, setSeekMs] = useState(0);
+  const pendingRef = useRef(false);
+  const onMetaRef = useRef(onPlaybackMeta);
+  onMetaRef.current = onPlaybackMeta;
 
-  const refresh = useCallback(async () => {
+  const useWs = wsConnected;
+  const position = useWs
+    ? playback.position_ms
+    : (fallback.playback_position_ms ?? 0);
+  const duration = useWs
+    ? playback.duration_ms
+    : (fallback.playback_duration_ms ?? 0);
+  const paused = useWs ? playback.paused : Boolean(fallback.paused);
+  const running = useWs ? playback.running : Boolean(fallback.running);
+  const status = useWs ? playback.status : (fallback.status ?? "idle");
+
+  // Push WS cursor to audio sync without re-creating poll effects.
+  useEffect(() => {
+    if (!useWs) return;
+    setSeekMs(position);
+    onMetaRef.current?.({
+      status,
+      running,
+      finished: playback.finished,
+      paused,
+      playback_position_ms: position,
+      playback_duration_ms: duration,
+    });
+  }, [useWs, position, duration, paused, running, status, playback.finished]);
+
+  const refreshFallback = useCallback(async () => {
+    if (pendingRef.current) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    pendingRef.current = true;
     try {
       const res = await fetch(
         `${apiBase()}${sessionPath(sessionId, "/incident")}`
       );
       if (!res.ok) return;
       const data = (await res.json()) as Record<string, unknown>;
-      const position =
+      const pos =
         typeof data.playback_position_ms === "number"
           ? data.playback_position_ms
           : typeof data.clock_ms === "number"
             ? data.clock_ms
             : 0;
-      const duration =
+      const dur =
         typeof data.playback_duration_ms === "number"
           ? data.playback_duration_ms
           : 0;
-      const status =
+      const st =
         typeof data.playback_status === "string"
           ? data.playback_status
           : undefined;
-      const paused = Boolean(data.paused);
-      const finished = status === "finished";
-      const running =
+      const isPaused = Boolean(data.paused);
+      const finished = st === "finished";
+      const isRunning =
         !finished &&
-        status !== undefined &&
-        status !== "idle" &&
-        status !== "error";
-      const next: Health = {
-        status,
-        running,
+        st !== undefined &&
+        st !== "idle" &&
+        st !== "error";
+      const next: PlaybackMeta = {
+        status: st,
+        running: isRunning,
         finished,
-        paused,
-        playback_position_ms: position,
-        playback_duration_ms: duration,
+        paused: isPaused,
+        playback_position_ms: pos,
+        playback_duration_ms: dur,
       };
-      setHealth(next);
-      setSeekMs(position);
-      onPlaybackMeta?.(next);
+      setFallback(next);
+      setSeekMs(pos);
+      onMetaRef.current?.(next);
     } catch {
       /* ignore poll errors */
+    } finally {
+      pendingRef.current = false;
     }
-  }, [sessionId, onPlaybackMeta]);
+  }, [sessionId]);
 
+  // Fallback poll only while the WebSocket is down.
   useEffect(() => {
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 1000);
-    return () => window.clearInterval(id);
-  }, [refresh]);
+    if (useWs) return;
+    void refreshFallback();
+    const id = window.setInterval(() => void refreshFallback(), 1000);
+    const onVis = () => {
+      if (!document.hidden) void refreshFallback();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [useWs, refreshFallback]);
 
   const run = async (label: string, fn: () => Promise<Response>) => {
     setBusy(true);
@@ -95,7 +155,7 @@ export function PlaybackBar({
         const text = await res.text();
         throw new Error(text || `${label} failed (${res.status})`);
       }
-      await refresh();
+      if (!useWs) await refreshFallback();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -103,15 +163,56 @@ export function PlaybackBar({
     }
   };
 
-  const duration = health.playback_duration_ms ?? 0;
-  const position = health.playback_position_ms ?? 0;
-  const running = Boolean(health.running);
-  const paused = Boolean(health.paused);
   const base = sessionPath(sessionId, "");
 
   return (
-    <section className="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+    <section className="panel flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={busy || !running}
+          className="pill-btn border border-line2 bg-raised/70 text-ink"
+          onClick={() =>
+            void run(paused ? "resume" : "pause", () =>
+              postJson(
+                paused ? `${base}/incident/resume` : `${base}/incident/pause`
+              )
+            )
+          }
+        >
+          {paused ? "Play" : "Pause"}
+        </button>
+        {speedControl}
+        {muteControl}
+
+        <div className="flex min-w-[160px] flex-1 basis-[220px] flex-col gap-1 px-1">
+          <div className="flex items-center justify-between text-[11px] text-inkFaint">
+            <span className="led text-inkMute">{fmt(position)}</span>
+            <span className="truncate px-2">{status}</span>
+            <span className="led text-inkMute">{fmt(duration)}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={Math.max(duration, 1)}
+            step={500}
+            value={Math.min(seekMs, Math.max(duration, 1))}
+            disabled={busy || duration <= 0}
+            className="w-full accent-[var(--accent)]"
+            onChange={(e) => setSeekMs(Number(e.target.value))}
+            onMouseUp={() =>
+              void run("seek", () =>
+                postJson(`${base}/incident/seek`, { ms: seekMs })
+              )
+            }
+            onTouchEnd={() =>
+              void run("seek", () =>
+                postJson(`${base}/incident/seek`, { ms: seekMs })
+              )
+            }
+          />
+        </div>
+
         <button
           type="button"
           disabled={busy || !leaseId}
@@ -125,21 +226,7 @@ export function PlaybackBar({
             )
           }
         >
-          {running ? "Join / running" : "Start demo"}
-        </button>
-        <button
-          type="button"
-          disabled={busy || !running}
-          className="pill-btn border border-line2 bg-raised/70 text-ink"
-          onClick={() =>
-            void run(paused ? "resume" : "pause", () =>
-              postJson(
-                paused ? `${base}/incident/resume` : `${base}/incident/pause`
-              )
-            )
-          }
-        >
-          {paused ? "Resume" : "Pause"}
+          {running ? "Running" : "Start demo"}
         </button>
         <button
           type="button"
@@ -165,34 +252,6 @@ export function PlaybackBar({
         >
           Export
         </a>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center justify-between text-[11px] text-inkFaint">
-          <span className="led text-inkMute">{fmt(position)}</span>
-          <span>{health.status ?? "idle"}</span>
-          <span className="led text-inkMute">{fmt(duration)}</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={Math.max(duration, 1)}
-          step={500}
-          value={Math.min(seekMs, Math.max(duration, 1))}
-          disabled={busy || duration <= 0}
-          className="w-full accent-[var(--accent)]"
-          onChange={(e) => setSeekMs(Number(e.target.value))}
-          onMouseUp={() =>
-            void run("seek", () =>
-              postJson(`${base}/incident/seek`, { ms: seekMs })
-            )
-          }
-          onTouchEnd={() =>
-            void run("seek", () =>
-              postJson(`${base}/incident/seek`, { ms: seekMs })
-            )
-          }
-        />
       </div>
 
       {error && (
