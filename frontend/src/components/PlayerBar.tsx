@@ -43,6 +43,7 @@ export function PlayerBar({
   onRestart,
   onJumpReconciliation,
   onSeek,
+  onExportReplay,
   audioSrc,
   sessionKey,
   getTargetMs,
@@ -71,6 +72,7 @@ export function PlayerBar({
   onRestart: () => void;
   onJumpReconciliation?: () => void;
   onSeek?: (ms: number) => void;
+  onExportReplay?: () => Promise<void>;
   audioSrc: string | null;
   sessionKey: string;
   getTargetMs: () => number | null;
@@ -194,6 +196,18 @@ export function PlayerBar({
         throw new Error(text || `${label} failed (${res.status})`);
       }
       if (mode === "live" && !useWs) await refreshFallback();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runVoid = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -342,6 +356,15 @@ export function PlayerBar({
           >
             Export
           </a>
+        ) : mode === "replay" && onExportReplay ? (
+          <button
+            type="button"
+            disabled={busy}
+            className="pill-btn whitespace-nowrap border border-line2 bg-raised/70 text-ink hover:border-accent/40"
+            onClick={() => void runVoid(onExportReplay)}
+          >
+            Export
+          </button>
         ) : null}
 
         {mode === "replay" && onJumpReconciliation ? (

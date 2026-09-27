@@ -1499,6 +1499,19 @@ def export_postmortem() -> str:
     return hub.export_markdown()
 
 
+@app.post("/export/render", response_class=PlainTextResponse)
+def export_render(state: dict[str, Any]) -> str:
+    """Stateless markdown export for a client-held IncidentState.
+
+    Recorded replay has no server-side session — the client already holds
+    the final board it reconstructed from replayed diffs. Render it with
+    the exact same function a live session's /export uses (render_postmortem
+    takes a plain IncidentState-shaped dict either way), so the two exports
+    are produced identically rather than by a second, drifting formatter.
+    """
+    return render_postmortem(state)
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     await hub.connect(ws)

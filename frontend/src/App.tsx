@@ -27,6 +27,7 @@ import {
 } from "./components/ReconciliationBeat";
 import { cx } from "./lib/cx";
 import { apiBase, postJson, sessionPath } from "./lib/api";
+import { fetchReplayExportMarkdown, downloadMarkdown } from "./lib/export";
 import {
   portalReplaySpeed,
   REPLAY_AUDIO_URL,
@@ -78,6 +79,13 @@ export default function App() {
     const c = columns.confirmed[0];
     return c ? c.text : null;
   }, [columns]);
+
+  // Replay has no server-side session to hit /s/<id>/export — render from
+  // the board the client already reconstructed from replayed diffs.
+  const onExportReplay = useCallback(async () => {
+    const markdown = await fetchReplayExportMarkdown(state);
+    downloadMarkdown(`postmortem-${state.incident_id || "incident"}.md`, markdown);
+  }, [state]);
 
   const leave = () => {
     setMode(null);
@@ -366,6 +374,7 @@ export default function App() {
               }
             : undefined
         }
+        onExportReplay={mode === "replay" ? onExportReplay : undefined}
         audioSrc={audioSrc}
         sessionKey={sessionKey}
         getTargetMs={getTargetMs}
