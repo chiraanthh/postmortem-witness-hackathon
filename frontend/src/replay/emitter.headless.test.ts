@@ -7,12 +7,19 @@ import type { DashboardAction, DashboardState } from "../state/types";
 /**
  * Headless end-to-end replay of the bundled fixture, driven through the
  * real reducer with fake timers (no wall-clock wait, no network, no API
- * calls). Exists to catch the class of bug where the "playback" wire frame
- * is silently dropped by the replay driver: state.clock_ms then only
- * advances on board-content diffs and freezes for the length of any real
- * gap between them (60s+ in this fixture) while SessionAudio's drift
- * correction keeps forcing the <audio> element back to that frozen target
- * — heard as the same fraction of a second looping forever.
+ * calls). Guards two regressions found together in the recorded-replay path:
+ *
+ * 1. The "playback" wire frame was silently dropped by the replay driver's
+ *    dispatchFrame. state.clock_ms then only advanced on board-content
+ *    diffs and froze for the length of any real gap between them (60s+ in
+ *    this fixture) while SessionAudio's drift correction kept forcing the
+ *    <audio> element back to that frozen target — heard as the same
+ *    fraction of a second looping forever.
+ * 2. A "lead-in trim" skipped both audio and board straight to ~53s (the
+ *    point real ASR/extraction cold-start finally produced something) on
+ *    every play/restart, instead of starting at true position 0 — the
+ *    first ~3.6s of a fresh call now correctly sits at clock_ms=0 rather
+ *    than skipping ahead.
  */
 describe("recorded replay — headless full run", () => {
   beforeEach(() => {
@@ -31,6 +38,14 @@ describe("recorded replay — headless full run", () => {
 
     const controller = startReplayEmitter(dispatch, 1);
     expect(controller.durationMs).toBeGreaterThan(0);
+
+    // Starts at the true beginning of the call, not skipped ahead to
+    // wherever the pipeline's cold-start first produced board content.
+    // (Checked after the first tick, not synchronously at mount — the
+    // very first frame is scheduled with a setTimeout, even at delay 0,
+    // so it hasn't fired yet right after startReplayEmitter() returns.)
+    await vi.advanceTimersByTimeAsync(1);
+    expect(state.clock_ms).toBe(0);
 
     const stepMs = 1000;
     const samples: { relMs: number; clockMs: number }[] = [
@@ -51,12 +66,11 @@ describe("recorded replay — headless full run", () => {
     // Terminates: the fixture's closing set_resolved diff must have landed.
     expect(state.resolved).toBe(true);
 
-    // The regression this test guards against: clock_ms must never sit at
-    // one value for longer than a few seconds. Before the fix this fixture
-    // freezes for 60,103ms starting at rel +31,001ms (right where the
-    // reported loop sits) because the ~1,144 "playback" heartbeat frames
-    // that should nudge it forward were silently dropped by the replay
-    // driver's dispatchFrame.
+    // clock_ms must never sit at one value for longer than a few seconds
+    // (the initial ~3.6s of genuine pre-content silence is the only
+    // legitimate flat stretch). Before the playback-frame fix, this
+    // fixture froze for 60,103ms mid-call because the ~1,144 "playback"
+    // heartbeat frames that should nudge it forward were silently dropped.
     let longestFreezeMs = 0;
     let runStart = samples[0].relMs;
     let runVal = samples[0].clockMs;

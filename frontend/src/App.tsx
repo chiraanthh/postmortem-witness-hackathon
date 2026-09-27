@@ -30,6 +30,7 @@ import { apiBase, postJson, sessionPath } from "./lib/api";
 import {
   portalReplaySpeed,
   REPLAY_AUDIO_URL,
+  replayDurationMs,
   type ReplaySpeed,
 } from "./replay/emitter";
 
@@ -97,12 +98,23 @@ export default function App() {
   }, [mode]);
 
   // Server / replay target for audio drift correction only — not the UI clock.
+  //
+  // Always blend the wall-clock estimate with state.clock_ms via Math.max,
+  // rather than switching to state.clock_ms the instant it goes nonzero.
+  // This fixture's own position tracker reports 0 for the call's first ~3s,
+  // then catches up gradually — switching branches on ">0" would freeze the
+  // target at whatever the (already-advanced) wall-clock estimate reached
+  // right as real data arrives, while native <audio> playback keeps
+  // climbing past it, so drift correction would repeatedly yank it back
+  // every ~250ms until the real value caught up. Both sources only ever
+  // increase within a run (reset together on restart), so their max is
+  // monotonic by construction — no separate clamp/ref needed.
   const getTargetMs = useCallback((): number | null => {
     if (mode === "live") return state.playback.position_ms;
     if (mode === "replay") {
-      if (state.clock_ms > 0) return state.clock_ms;
       const elapsed = performance.now() - replayStartWallRef.current;
-      return replayOriginRef.current + elapsed * replaySpeed;
+      const wallClockEstimate = replayOriginRef.current + elapsed * replaySpeed;
+      return Math.max(state.clock_ms, wallClockEstimate);
     }
     return null;
   }, [mode, state.clock_ms, state.playback.position_ms, replaySpeed]);
@@ -127,7 +139,7 @@ export default function App() {
 
   const durationMs =
     mode === "replay"
-      ? 282000
+      ? replayDurationMs()
       : state.playback.duration_ms > 0
         ? state.playback.duration_ms
         : 282000;

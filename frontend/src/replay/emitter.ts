@@ -64,11 +64,6 @@ export const REPLAY_AUDIO_URL = "/media/demo/incident_01.wav";
 export const REPLAY_SPEEDS = [1, 2, 3] as const;
 export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number];
 
-function isBoardContent(msg: WireEnvelope): boolean {
-  if (msg.type !== "diff") return false;
-  return (msg.ops ?? []).some((o) => o.op !== "set_latency");
-}
-
 function isReconciliation(msg: WireEnvelope): boolean {
   if (msg.type !== "diff") return false;
   return (msg.ops ?? []).some((o) => o.op === "reconciliation");
@@ -88,8 +83,6 @@ function reconciliationEventsTouched(msg: WireEnvelope): number | null {
 const sortedFrames = [...fixture.messages].sort(
   (a, b) => a.emit_at_ms - b.emit_at_ms
 );
-const firstContent = sortedFrames.find((fr) => isBoardContent(fr.message));
-const ORIGIN_EMIT_AT_MS = firstContent?.emit_at_ms ?? 0;
 const reconFrame = sortedFrames.find((fr) => isReconciliation(fr.message));
 const RECON_EMIT_AT_MS = reconFrame?.emit_at_ms ?? 0;
 const RECON_EVENTS_TOUCHED =
@@ -103,8 +96,8 @@ const RECON_EVENTS_TOUCHED =
 export const REPLAY_RECONCILIATION = {
   events_touched: RECON_EVENTS_TOUCHED,
   emit_at_ms: RECON_EMIT_AT_MS,
-  /** Capture-clock ms after lead-in trim (audio/board time ≈ this). */
-  relative_ms: Math.max(0, RECON_EMIT_AT_MS - ORIGIN_EMIT_AT_MS),
+  /** Capture-clock ms since call start (audio/board time ≈ this). */
+  relative_ms: RECON_EMIT_AT_MS,
 } as const;
 
 export interface ReplayController {
@@ -115,12 +108,10 @@ export interface ReplayController {
   seek: (relativeMs: number) => void;
   /** Apply every frame through the reconciliation DiffOp, then continue. */
   jumpToReconciliation: () => void;
-  /** Wall-clock duration of the timed replay after lead-in trim, at speed=1. */
+  /** Wall-clock duration of the full replay, at speed=1. */
   durationMs: number;
-  /** Audio/board origin in the original capture (trimmed lead-in). */
-  originEmitAtMs: number;
   reconciliationRelMs: number;
-  /** Current capture-relative position (ms after lead-in). */
+  /** Current capture-relative position (ms since call start). */
   positionMs: () => number;
   isPaused: () => boolean;
 }
@@ -191,10 +182,12 @@ function dispatchFrame(
 /**
  * Replay captured live-pipeline WebSocket frames.
  *
- * The raw capture has ~43s of latency-only heartbeats before the first board
- * op (empty call open). We trim that lead-in so the portal is not blank, then
- * play remaining frames with relative timing preserved. Snapshot applies
- * synchronously so the shell is never stuck on the boot incident id.
+ * Plays the full capture from t=0 with relative timing preserved — audio
+ * and board both start at the true beginning of the call. The first ~53s
+ * genuinely has no board content yet (nothing hypothesis-worthy has been
+ * said), same as a real live viewer would see; the board stays empty for
+ * that stretch by design, not a bug. Snapshot applies synchronously so the
+ * shell is never stuck on the boot incident id.
  */
 export function startReplayEmitter(
   dispatch: Dispatch<DashboardAction>,
@@ -204,7 +197,7 @@ export function startReplayEmitter(
   let speedFactor = speed > 0 ? speed : 1;
   let timers: number[] = [];
   /** Capture-clock cursor: frames with emit_at_ms <= this are applied. */
-  let cursorEmit = ORIGIN_EMIT_AT_MS;
+  let cursorEmit = 0;
   /** Wall time when cursorEmit was last anchored. */
   let anchorWall = performance.now();
   let paused = false;
@@ -223,15 +216,14 @@ export function startReplayEmitter(
       seek: () => undefined,
       jumpToReconciliation: () => undefined,
       durationMs: 0,
-      originEmitAtMs: 0,
       reconciliationRelMs: 0,
       positionMs: () => 0,
       isPaused: () => false,
     };
   }
 
-  // Timed queue: everything after lead-in trim except handshake/snapshot
-  // (those apply immediately like a live /ws connect).
+  // Timed queue: everything except handshake/snapshot (those apply
+  // immediately, like a live /ws connect).
   const queue: { index: number; emit_at_ms: number; message: WireEnvelope }[] =
     [];
   sortedFrames.forEach((frame, index) => {
@@ -243,18 +235,10 @@ export function startReplayEmitter(
       applied.add(index);
       return;
     }
-    if (frame.emit_at_ms < ORIGIN_EMIT_AT_MS && !isBoardContent(frame.message)) {
-      applied.add(index);
-      return;
-    }
     queue.push({ index, emit_at_ms: frame.emit_at_ms, message: frame.message });
   });
 
-  const lastEmit = queue.reduce(
-    (m, f) => Math.max(m, f.emit_at_ms),
-    ORIGIN_EMIT_AT_MS
-  );
-  const durationMs = Math.max(0, lastEmit - ORIGIN_EMIT_AT_MS);
+  const durationMs = queue.reduce((m, f) => Math.max(m, f.emit_at_ms), 0);
 
   function clearTimers() {
     timers.forEach((id) => window.clearTimeout(id));
@@ -320,7 +304,7 @@ export function startReplayEmitter(
 
   function seek(relativeMs: number) {
     if (stopped) return;
-    const target = ORIGIN_EMIT_AT_MS + Math.max(0, relativeMs);
+    const target = Math.max(0, relativeMs);
     // Forward-only apply; for rewind, restart from snapshot via full remount.
     if (target < cursorEmit && !paused) {
       // Cannot rewind mid-queue without remount — leave to App restart.
@@ -342,15 +326,13 @@ export function startReplayEmitter(
 
   return {
     durationMs,
-    originEmitAtMs: ORIGIN_EMIT_AT_MS,
     reconciliationRelMs: REPLAY_RECONCILIATION.relative_ms,
     setSpeed,
     pause,
     resume,
     seek,
     jumpToReconciliation,
-    positionMs: () =>
-      Math.max(0, (paused ? cursorEmit : readCursorEmit()) - ORIGIN_EMIT_AT_MS),
+    positionMs: () => Math.max(0, paused ? cursorEmit : readCursorEmit()),
     isPaused: () => paused,
     stop: () => {
       stopped = true;
@@ -368,8 +350,5 @@ export function portalReplaySpeed(): number {
 }
 
 export function replayDurationMs(speed = 1): number {
-  return (
-    Math.max(0, (fixture.duration_ms ?? 0) - ORIGIN_EMIT_AT_MS) /
-    (speed > 0 ? speed : 1)
-  );
+  return (fixture.duration_ms ?? 0) / (speed > 0 ? speed : 1);
 }
