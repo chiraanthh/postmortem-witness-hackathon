@@ -7,23 +7,24 @@
   "extraction_temperature": 0.0,
   "audio_file": "demo/audio/incident_01.wav",
   "captured_unix_ms": 1790139839903,
-  "frame_count": 1528,
+  "frame_count": 1529,
   "duration_ms": 287334,
   "type_counts": {
     "handshake": 1,
     "snapshot": 1,
     "playback": 1144,
-    "diff": 301,
+    "diff": 302,
     "partial": 81
   },
   "op_counts": {
     "set_latency": 288,
-    "upsert_hypothesis": 7,
-    "upsert_event": 14,
+    "upsert_hypothesis": 8,
+    "upsert_event": 15,
     "upsert_thread": 2,
     "upsert_action": 5,
     "silence_summary": 1,
-    "set_resolved": 1
+    "set_resolved": 1,
+    "reconciliation": 1
   },
   "messages": [
     {
@@ -21386,6 +21387,69 @@
           }
         ]
       }
+    },
+    {
+      "emit_at_ms": 287100,
+      "message": {
+        "type": "diff",
+        "ops": [
+          {
+            "op": "upsert_event",
+            "key": "42989763-0d83-4cce-acfd-94fa878fa8a5",
+            "value": {
+              "event_id": "42989763-0d83-4cce-acfd-94fa878fa8a5",
+              "type": "hypothesis",
+              "connection_epoch": 0,
+              "turn_order": 14,
+              "speaker_label": "B",
+              "speaker_name": null,
+              "timestamp_ms": 40512,
+              "text": "We had a resolver issue last month that looked a lot like this. Could be the connection pool. If we're exhausting database connections, we'd see exactly this pattern.",
+              "summary": "Connection pool exhaustion could cause this pattern",
+              "hypothesis_id": "connection-pool-exhaustion",
+              "new_state": null,
+              "owner": null,
+              "confidence": 0.85,
+              "previous_speaker_label": "C",
+              "addressee": null,
+              "answers_thread_id": null,
+              "claim_subject": "connection-pool-exhaustion",
+              "claim_assertion": "exhausting database connections would produce exactly this pattern",
+              "claim_quote": "If we're exhausting database connections, we'd see exactly this pattern."
+            }
+          },
+          {
+            "op": "upsert_hypothesis",
+            "key": "connection-pool-exhaustion",
+            "value": {
+              "hypothesis_id": "connection-pool-exhaustion",
+              "text": "Connection pool exhaustion could cause this pattern",
+              "state": "open",
+              "raised_by_label": "B",
+              "raised_at_ms": 40512,
+              "resolved_at_ms": null,
+              "implicit": false
+            }
+          },
+          {
+            "op": "reconciliation",
+            "key": null,
+            "value": {
+              "events_touched": 1,
+              "speakers": [
+                {
+                  "turn_key": "e0/t14",
+                  "event_id": "42989763-0d83-4cce-acfd-94fa878fa8a5",
+                  "previous_speaker_label": "C",
+                  "speaker_label": "B"
+                }
+              ],
+              "owners": []
+            }
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "manual_addendum": "The live capture's teardown SpeakerRevision batch produced zero board-level corrections for this run (diarization happened to already be correct for the few turns that raised events). One manually-constructed reconciliation frame was appended at emit_at_ms=287100 so the portal's 'Jump to recon' control has something real to demonstrate: it re-labels the existing connection-pool hypothesis's raising turn (e0/t14) from speaker C to B, using the exact upsert_event + upsert_hypothesis + reconciliation DiffOp shape IncidentMachine.reconcile() produces (backend/state/machine.py). No audio, transcript, or extraction content was invented \u2014 only this one speaker-label correction. Replace with a real capture (backend/tools/capture_ws_fixture.py) once extraction API access is available; see git log for this commit."
 }

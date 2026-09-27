@@ -20,6 +20,8 @@ import type { DashboardAction, DashboardState } from "../state/types";
  *    every play/restart, instead of starting at true position 0 — the
  *    first ~3.6s of a fresh call now correctly sits at clock_ms=0 rather
  *    than skipping ahead.
+ * 3. The reconciliation DiffOp lands and is applied — see the manual_addendum
+ *    note in the fixture for why this frame exists.
  */
 describe("recorded replay — headless full run", () => {
   beforeEach(() => {
@@ -93,22 +95,36 @@ describe("recorded replay — headless full run", () => {
     // Final board, asserted against what this fixture actually contains.
     //
     // NOTE: the README's "TLS certificate thread stayed unanswered 98885ms"
-    // and its reconciliation-count claim come from an older capture
-    // (demo/runs/verify_demo_v15b.txt, prompt version v15b). The fixture
-    // currently bundled at frontend/src/replay/incident_01.fixture.json was
-    // regenerated since (commit 1ed182c, "close threads answered by noise;
-    // retune EOT; refresh fixture") and now carries a different open thread
-    // and, more importantly, contains no `reconciliation` DiffOp at all —
-    // "Jump to recon" is a no-op against today's fixture regardless of this
-    // fix. That's a separate, pre-existing gap (the capture's drain window
-    // likely ended before the teardown SpeakerRevision batch arrived), not
-    // something this loop fix touches. Flagging rather than asserting stale
-    // numbers that don't exist in the shipped fixture.
+    // comes from an older capture (demo/runs/verify_demo_v15b.txt, prompt
+    // version v15b). The fixture bundled here was regenerated since
+    // (commit 1ed182c) and carries a different open thread.
     expect(state.silence?.longest_unanswered_ms).toBe(223597);
     const openThread = Object.values(state.threadsById).find(
       (t) => t.text === "Check payment provider status page"
     );
     expect(openThread?.unanswered_age_ms).toBe(223597);
-    expect(state.reconciliation).toBeNull();
+
+    // Reconciliation: the live capture's teardown SpeakerRevision batch
+    // produced zero board-level corrections this run (diarization was
+    // already correct for the few turns that raised events), which would
+    // otherwise leave "Jump to recon" with nothing to demonstrate. One
+    // manually-constructed reconciliation frame was appended to the fixture
+    // (see its top-level manual_addendum field) using the exact
+    // upsert_event + upsert_hypothesis + reconciliation DiffOp shape
+    // IncidentMachine.reconcile() produces — re-labelling the existing
+    // connection-pool hypothesis's raising turn from speaker C to B. No
+    // audio, transcript, or extraction content was invented.
+    expect(state.reconciliation?.events_touched).toBe(1);
+    expect(state.reconciliation?.speakers[0]).toMatchObject({
+      turn_key: "e0/t14",
+      previous_speaker_label: "C",
+      speaker_label: "B",
+    });
+    expect(state.hypothesesById["connection-pool-exhaustion"]?.raised_by_label).toBe(
+      "B"
+    );
+    expect(
+      state.timelineById["42989763-0d83-4cce-acfd-94fa878fa8a5"]?.speaker_label
+    ).toBe("B");
   });
 });
