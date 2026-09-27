@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from backend.byok import ApiKeys
     from backend.main import IncidentHub
     from backend.session_slots import LiveSlotManager
 
@@ -52,11 +53,14 @@ class SessionRegistry:
         *,
         kind: str = "live",
         lease_id: str | None = None,
+        api_keys: "ApiKeys | None" = None,
     ) -> Session | None:
         """Acquire a seat and create a dedicated hub. None if seats full.
 
         If `lease_id` is provided (promoted wait-queue ticket), bind that
-        reservation instead of minting a new one.
+        reservation instead of minting a new one. `api_keys`, when given,
+        is the visitor's own BYOK credentials — see backend/byok.py; it is
+        handed straight to the new hub and held nowhere else.
         """
         from backend.main import IncidentHub
 
@@ -68,7 +72,7 @@ class SessionRegistry:
             return None
 
         session_id = uuid.uuid4().hex[:12]
-        hub = IncidentHub()
+        hub = IncidentHub(api_keys=api_keys)
         if self._loop is not None:
             hub.bind_loop(self._loop)
         session = Session(

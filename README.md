@@ -24,11 +24,12 @@ Voice in, artifact out.
 
 1. Open https://web-production-88f09e.up.railway.app — you land on the
    **portal**, not the board.
-2. **Run the live pipeline** (capped at 2 concurrent seats; counter
-   updates live) or **Recorded run of the live pipeline** (uncapped
-   replay of a real temp-0 capture — zero API seats). When seats are
-   full, the recorded run is the primary action — try again in a few
-   minutes for live.
+2. **Recorded run of the live pipeline** is the primary action — an
+   uncapped replay of a real temp-0 capture, zero API seats, no key
+   needed. **Run the live pipeline** (capped at 2 concurrent seats;
+   counter updates live) and **Upload your own call** need your own
+   AssemblyAI and Anthropic API keys — see [Bring your own
+   key](#bring-your-own-key-live--upload) below.
 3. Live call is **282.4 s** (~4.7 min). Use the scrubber to seek; jump
    near the end (~4:33) to re-fire reconciliation.
 4. **Export** downloads `/export`. **Portal** returns to the opening
@@ -38,6 +39,37 @@ The audio is a **scripted** incident (`demo/script/incident_01.yaml`) with
 **synthesised** voices via Sarvam **Bulbul v3** (four speakers: Arjun,
 Disha, Priya, Rohan). Several lines are flagged `overlap: true` for
 deliberate crosstalk. It is not a live mic capture.
+
+## Bring your own key (live + upload)
+
+**Recorded run needs nothing** — it replays a captured WebSocket tape
+entirely client-side. No key, no server session, no API cost, regardless
+of who's hosting it.
+
+**Live pipeline and upload run on your own AssemblyAI and Anthropic
+keys**, not the host's. Paste both into the portal before either becomes
+clickable; the form states plainly what happens to them:
+
+- Held **in memory only**, attached to that one session — never written
+  to disk, never logged, never included in any response, snapshot, or
+  broadcast.
+- **Discarded** the instant the session ends, the seat idles out (45s),
+  or you leave — nothing else in the process can reach them again.
+- **Never sent back to your browser** after you submit them.
+- Checked with **one cheap call each** before a seat is spent — a
+  `GET /v2/transcript?limit=1` against AssemblyAI, a 1-token Haiku call
+  against Anthropic — so a copy-pasted or revoked key fails fast with a
+  clear message instead of dying mid-incident. A key that's merely
+  rate-limited or over its usage cap is still accepted; only an
+  unambiguous auth failure (401) is rejected.
+- The 2-seat cap and 45s inactivity expiry are unchanged — BYOK affects
+  whose key runs the pipeline, not how many people can run it at once.
+
+Implementation: `backend/byok.py` (validators), `IncidentHub(api_keys=...)`
+(`backend/main.py` — threads the session's key into its own
+`TranscriptionStream`/`AnthropicDirect` instances instead of the process's
+global `ASSEMBLYAI_API_KEY`/`ANTHROPIC_API_KEY`), and the key form on
+`frontend/src/components/Portal.tsx`.
 
 ## Named mechanics
 
@@ -213,8 +245,12 @@ same origin). Not Vercel functions — WebSockets and in-memory state need
 a persistent process.
 
 - Public URL: https://web-production-88f09e.up.railway.app
-- Required env: `ASSEMBLYAI_API_KEY`, `ANTHROPIC_API_KEY` (`SARVAM_API_KEY`
-  optional, TTS regen only).
+- No `ASSEMBLYAI_API_KEY` / `ANTHROPIC_API_KEY` required on the host —
+  live and upload run on each visitor's own keys (see [Bring your own
+  key](#bring-your-own-key-live--upload)). Set them in `.env` only for
+  local dev convenience (`backend/tools/*`, the live-API test cases) or
+  to keep the legacy single-hub `/incident/*` routes working; the portal
+  itself never reads them. `SARVAM_API_KEY` optional, TTS regen only.
 - Second browser hitting Start joins the running incident
   (`joined: true`); it does not start a second pipeline. Live seats are
   capped at 2 (`LIVE_PIPELINE_CAP`); recorded live-pipeline replay is uncapped.

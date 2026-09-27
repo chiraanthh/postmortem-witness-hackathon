@@ -7,9 +7,14 @@ import { apiBase } from "../lib/api";
  * Shows upload % then "Normalising audio…" while ffmpeg runs server-side.
  */
 export function UploadPage({
+  assemblyaiKey,
+  anthropicKey,
   onCancel,
   onStarted,
 }: {
+  /** BYOK keys collected on the portal — see Portal.tsx and backend/byok.py. */
+  assemblyaiKey: string;
+  anthropicKey: string;
   onCancel: () => void;
   onStarted: (sessionId: string, leaseId: string) => void;
 }) {
@@ -37,6 +42,8 @@ export function UploadPage({
 
       const body = new FormData();
       body.append("file", file);
+      body.append("assemblyai_api_key", assemblyaiKey.trim());
+      body.append("anthropic_api_key", anthropicKey.trim());
 
       const xhr = new XMLHttpRequest();
       xhrRef.current = xhr;
@@ -119,7 +126,7 @@ export function UploadPage({
 
       xhr.send(body);
     },
-    [onStarted]
+    [onStarted, assemblyaiKey, anthropicKey]
   );
 
   return (
@@ -159,6 +166,10 @@ export function UploadPage({
             <li>Max upload 40 MiB · max duration 15 minutes.</li>
             <li>Consumes one live seat (same cap as the demo pipeline).</li>
             <li>File is deleted when the session ends or the seat expires.</li>
+            <li>
+              Runs on the AssemblyAI and Anthropic keys you entered on the
+              portal — held in memory only, discarded with this session.
+            </li>
           </ul>
         </div>
 

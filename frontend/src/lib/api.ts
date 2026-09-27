@@ -73,10 +73,54 @@ export type LiveSession = {
   status: LivePipelineStatus;
 };
 
-export async function createLiveSession(): Promise<
+/**
+ * Visitor-supplied AssemblyAI + Anthropic credentials for a live/upload
+ * session. Kept only in React state on the client and in this request body
+ * — never written to storage, never logged. See backend/byok.py.
+ */
+export type ByokKeys = {
+  assemblyaiKey: string;
+  anthropicKey: string;
+};
+
+function byokBody(keys: ByokKeys): {
+  assemblyai_api_key: string;
+  anthropic_api_key: string;
+} {
+  return {
+    assemblyai_api_key: keys.assemblyaiKey,
+    anthropic_api_key: keys.anthropicKey,
+  };
+}
+
+/** Thrown when the server rejects a supplied key; `which` names the key. */
+export class BadKeyError extends Error {
+  which: "assemblyai" | "anthropic" | null;
+  constructor(message: string, which: "assemblyai" | "anthropic" | null) {
+    super(message);
+    this.which = which;
+  }
+}
+
+function keyErrorFromDetail(detail: unknown, fallback: string): Error {
+  if (typeof detail === "string") return new Error(detail);
+  if (detail && typeof detail === "object") {
+    const d = detail as Record<string, unknown>;
+    if (typeof d.message === "string") {
+      const which =
+        d.which === "assemblyai" || d.which === "anthropic" ? d.which : null;
+      return new BadKeyError(d.message, which);
+    }
+  }
+  return new Error(fallback);
+}
+
+export async function createLiveSession(
+  keys: ByokKeys
+): Promise<
   { ok: true } & LiveSession | { ok: false; full: true; status: LivePipelineStatus }
 > {
-  const res = await postJson("/sessions", { kind: "live" });
+  const res = await postJson("/sessions", { kind: "live", ...byokBody(keys) });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   const detail = (data.detail ?? data) as Record<string, unknown>;
   const status: LivePipelineStatus = {
@@ -92,10 +136,9 @@ export async function createLiveSession(): Promise<
     typeof data.session_id !== "string" ||
     typeof data.lease_id !== "string"
   ) {
-    throw new Error(
-      typeof detail.message === "string"
-        ? detail.message
-        : `create session failed (${res.status})`
+    throw keyErrorFromDetail(
+      data.detail,
+      `create session failed (${res.status})`
     );
   }
   return {
@@ -111,11 +154,11 @@ export async function createLiveSession(): Promise<
 }
 
 /** @deprecated prefer createLiveSession — alias kept for older call sites */
-export async function acquireLiveLease(): Promise<
+export async function acquireLiveLease(keys: ByokKeys): Promise<
   | { ok: true; lease_id: string; session_id?: string; status: LivePipelineStatus }
   | { ok: false; full: true; status: LivePipelineStatus }
 > {
-  const seat = await createLiveSession();
+  const seat = await createLiveSession(keys);
   if (!seat.ok) return seat;
   return {
     ok: true,
@@ -180,18 +223,23 @@ export async function heartbeatLiveQueue(ticketId: string): Promise<{
   };
 }
 
-export async function claimLiveQueue(ticketId: string): Promise<LiveSession> {
-  const res = await postJson("/live/queue/claim", { ticket_id: ticketId });
+export async function claimLiveQueue(
+  ticketId: string,
+  keys: ByokKeys
+): Promise<LiveSession> {
+  const res = await postJson("/live/queue/claim", {
+    ticket_id: ticketId,
+    ...byokBody(keys),
+  });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (
     !res.ok ||
     typeof data.session_id !== "string" ||
     typeof data.lease_id !== "string"
   ) {
-    throw new Error(
-      typeof data.detail === "string"
-        ? data.detail
-        : `claim failed (${res.status})`
+    throw keyErrorFromDetail(
+      data.detail,
+      `claim failed (${res.status})`
     );
   }
   return {

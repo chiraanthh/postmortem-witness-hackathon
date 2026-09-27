@@ -39,6 +39,10 @@ type PortalView = "home" | "upload";
 
 export default function App() {
   const [portalView, setPortalView] = useState<PortalView>("home");
+  // BYOK: visitor-supplied keys for live/upload only. Component state,
+  // never persisted — see Portal.tsx and backend/byok.py.
+  const [assemblyaiKey, setAssemblyaiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
   const [mode, setMode] = useState<SessionMode>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [leaseId, setLeaseId] = useState<string | null>(null);
@@ -168,6 +172,8 @@ export default function App() {
     if (portalView === "upload") {
       return (
         <UploadPage
+          assemblyaiKey={assemblyaiKey}
+          anthropicKey={anthropicKey}
           onCancel={() => setPortalView("home")}
           onStarted={(sid, lid) => {
             setSessionId(sid);
@@ -182,6 +188,10 @@ export default function App() {
     }
     return (
       <Portal
+        assemblyaiKey={assemblyaiKey}
+        anthropicKey={anthropicKey}
+        onAssemblyaiKeyChange={setAssemblyaiKey}
+        onAnthropicKeyChange={setAnthropicKey}
         onEnterLive={(sid, lid) => {
           setSessionId(sid);
           setLeaseId(lid);

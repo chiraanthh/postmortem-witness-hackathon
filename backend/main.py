@@ -46,14 +46,30 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+import anthropic
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend import config
+from backend.byok import (
+    ApiKeys,
+    KeyValidationError,
+    validate_anthropic_key,
+    validate_assemblyai_key,
+)
 from backend.export import render_postmortem
+from backend.extraction.providers.anthropic_direct import AnthropicDirect
 from backend.extraction.worker import ExtractionWorker, Rejection, RunningContext
 from backend.metrics import E2E, Metrics, now_ms
 from backend.session_slots import LiveSlotManager
@@ -206,7 +222,10 @@ class IncidentHub:
     onto the asyncio loop via `call_soon_threadsafe`.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, api_keys: ApiKeys | None = None) -> None:
+        # Bring-your-own-key: set only for visitor-supplied live/upload
+        # sessions. Held only here, for this hub's lifetime — see backend/byok.py.
+        self._api_keys = api_keys
         self.machine = IncidentMachine(incident_id="incident")
         self.metrics = Metrics()
         self.worker = self._make_worker()
@@ -239,10 +258,30 @@ class IncidentHub:
         self._suppress_teardown = False
 
     def _make_worker(self) -> ExtractionWorker:
+        provider = self._session_anthropic_provider()
         return ExtractionWorker(
             metrics=self.metrics,
             on_log=log.info,
             on_provider_error=self._on_provider_error,
+            provider=provider,
+        )
+
+    def _session_anthropic_provider(self) -> AnthropicDirect | None:
+        """BYOK: build the default provider on this session's own key.
+
+        None (not this hub's api_keys) means fall through to
+        ExtractionWorker's own default (`make_provider()` on the global env
+        key) — the un-keyed legacy /incident/* single-hub path.
+        """
+        if self._api_keys is None:
+            return None
+        return AnthropicDirect(
+            model=config.extraction_model(),
+            client=anthropic.Anthropic(
+                api_key=self._api_keys.anthropic,
+                timeout=config.EXTRACTION_TIMEOUT_S,
+            ),
+            timeout_s=config.EXTRACTION_TIMEOUT_S,
         )
 
     def _on_provider_error(self, message: str) -> None:
@@ -604,9 +643,11 @@ class IncidentHub:
             )
             self._source = source
             stream_config = StreamConfig(max_speakers=4)
+            asr_key = self._api_keys.assemblyai if self._api_keys else None
             stream = TranscriptionStream(
                 source,
                 stream_config,
+                api_key=asr_key,
                 on_utterance=self._on_utterance,
                 on_amendment=self._on_amendment,
                 on_partial=self._on_partial,
@@ -631,6 +672,7 @@ class IncidentHub:
                         stream = TranscriptionStream(
                             source,
                             stream_config,
+                            api_key=asr_key,
                             on_utterance=self._on_utterance,
                             on_amendment=self._on_amendment,
                             on_partial=self._on_partial,
@@ -932,10 +974,28 @@ class IncidentHub:
             provider=provider, model=model, cleanup=cleanup
         )
         with self._lock:
-            self.worker.rebind_provider(
-                provider=str(status["provider"]),
-                model=str(status["model"]),
-            )
+            # BYOK: the picker only ever names a provider/model, never a key.
+            # Rebinding to "anthropic" on a keyed session must keep using this
+            # session's own key, not fall through to make_provider()'s global
+            # env key (unset on a hosted BYOK deploy).
+            if self._api_keys is not None and str(status["provider"]) in (
+                "anthropic",
+                "anthropic_direct",
+                "direct",
+            ):
+                self.worker.provider = AnthropicDirect(
+                    model=str(status["model"]),
+                    client=anthropic.Anthropic(
+                        api_key=self._api_keys.anthropic,
+                        timeout=self.worker.timeout_s,
+                    ),
+                    timeout_s=self.worker.timeout_s,
+                )
+            else:
+                self.worker.rebind_provider(
+                    provider=str(status["provider"]),
+                    model=str(status["model"]),
+                )
         log.info(
             "extraction runtime set: provider=%s model=%s cleanup=%s",
             status["provider"],
@@ -1049,6 +1109,46 @@ class CreateSessionBody(BaseModel):
         default=None,
         description="Optional reserved lease from the wait queue",
     )
+    # No length/format constraint on purpose: a validation-error response
+    # can echo the rejected value, and a key must never appear in a response.
+    # Presence/shape is checked by hand in the handler instead.
+    assemblyai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+
+
+class ClaimQueueBody(BaseModel):
+    ticket_id: str = Field(..., min_length=8)
+    assemblyai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+
+
+def _require_and_validate_byok_keys(
+    assemblyai_key: str | None, anthropic_key: str | None
+) -> ApiKeys:
+    """Live/upload entry point: both keys required, each checked with one
+    cheap call. Never logs or echoes a key — only which one failed and why.
+    """
+    asr = (assemblyai_key or "").strip()
+    ant = (anthropic_key or "").strip()
+    if not asr or not ant:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": (
+                    "Live pipeline needs your own AssemblyAI and Anthropic "
+                    "API keys — recorded run needs none."
+                ),
+            },
+        )
+    try:
+        validate_assemblyai_key(asr)
+        validate_anthropic_key(ant)
+    except KeyValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"which": exc.which, "message": str(exc)},
+        ) from exc
+    return ApiKeys(assemblyai=asr, anthropic=ant)
 
 
 def _session_hub(session_id: str):
@@ -1085,8 +1185,12 @@ def create_session(body: CreateSessionBody | None = None) -> dict[str, Any]:
             status_code=400,
             detail="only kind=live is server-backed; use recorded replay in the UI",
         )
+    api_keys = _require_and_validate_byok_keys(
+        body.assemblyai_api_key if body else None,
+        body.anthropic_api_key if body else None,
+    )
     reserved = body.lease_id if body else None
-    session = registry.create_live(lease_id=reserved)
+    session = registry.create_live(lease_id=reserved, api_keys=api_keys)
     if session is None:
         status = live_slots.status()
         raise HTTPException(
@@ -1107,13 +1211,18 @@ def create_session(body: CreateSessionBody | None = None) -> dict[str, Any]:
 
 
 @app.post("/sessions/upload")
-async def upload_and_start(file: UploadFile = File(...)) -> dict[str, Any]:
+async def upload_and_start(
+    file: UploadFile = File(...),
+    assemblyai_api_key: str = Form(default=""),
+    anthropic_api_key: str = Form(default=""),
+) -> dict[str, Any]:
     """Accept a call recording, normalise to 16 kHz mono PCM, start a live seat.
 
     Limits (env-overridable): UPLOAD_MAX_BYTES (default 40 MiB),
     UPLOAD_MAX_DURATION_MS (default 15 min).
     """
-    session = registry.create_live(kind="upload")
+    api_keys = _require_and_validate_byok_keys(assemblyai_api_key, anthropic_api_key)
+    session = registry.create_live(kind="upload", api_keys=api_keys)
     if session is None:
         status = live_slots.status()
         raise HTTPException(
@@ -1276,15 +1385,23 @@ def heartbeat_live_queue(body: TicketBody) -> dict[str, Any]:
 
 
 @app.post("/live/queue/claim")
-def claim_live_queue(body: TicketBody) -> dict[str, Any]:
-    """Promote a ready ticket into a live /s/<id> session."""
+def claim_live_queue(body: ClaimQueueBody) -> dict[str, Any]:
+    """Promote a ready ticket into a live /s/<id> session.
+
+    Keys are re-submitted here (the client already collected them before
+    joining the queue) rather than held server-side while waiting — a key
+    only ever exists attached to the IncidentHub it belongs to.
+    """
+    api_keys = _require_and_validate_byok_keys(
+        body.assemblyai_api_key, body.anthropic_api_key
+    )
     lease_id = live_slots.claim_ready(body.ticket_id)
     if lease_id is None:
         raise HTTPException(
             status_code=409,
             detail="ticket not ready — keep heartbeating",
         )
-    session = registry.create_live(lease_id=lease_id)
+    session = registry.create_live(lease_id=lease_id, api_keys=api_keys)
     if session is None:
         live_slots.release(lease_id)
         raise HTTPException(status_code=503, detail="could not bind reserved seat")
