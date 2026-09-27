@@ -30,7 +30,16 @@ type WireEnvelope =
       >;
       refusals?: GroundingRefusal[];
     }
-  | { type: "provider_error"; message: string };
+  | { type: "provider_error"; message: string }
+  | {
+      type: "playback";
+      playback_position_ms: number;
+      playback_duration_ms: number;
+      paused: boolean;
+      status: string;
+      running: boolean;
+      finished: boolean;
+    };
 
 interface TimedFrame {
   emit_at_ms: number;
@@ -156,6 +165,25 @@ function dispatchFrame(
     dispatch({
       type: "PROVIDER_ERROR",
       message: msg.message || "extraction provider failed",
+    });
+    return;
+  }
+
+  if (msg.type === "playback") {
+    // Same continuous audio-position heartbeat the live transport applies
+    // (see transport/index.ts). Without this, state.clock_ms only advances
+    // on board-content diffs, freezing for the length of any real gap
+    // between events — SessionAudio's drift correction then repeatedly
+    // snaps the <audio> element back to that stale target, which reads as
+    // an infinite loop of the same few hundred ms of audio.
+    dispatch({
+      type: "PLAYBACK",
+      position_ms: msg.playback_position_ms ?? 0,
+      duration_ms: msg.playback_duration_ms ?? 0,
+      paused: Boolean(msg.paused),
+      status: msg.status ?? "idle",
+      running: Boolean(msg.running),
+      finished: Boolean(msg.finished),
     });
   }
 }
